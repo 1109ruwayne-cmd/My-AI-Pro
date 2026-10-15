@@ -181,6 +181,36 @@ def _merge_engines(saved) -> dict:
 def save_config(cfg: dict) -> None:
     with _config_lock:
         CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    threading.Thread(target=_backup_config_to_turso, daemon=True).start()
+
+
+def _backup_config_to_turso() -> None:
+    """Mirror config.json into the same Turso database that holds the billing
+    data, so Settings changes survive restarts on free hosts."""
+    try:
+        if billing.turso_enabled():
+            billing._turso_sql("CREATE TABLE IF NOT EXISTS kv_store(k TEXT PRIMARY KEY, v TEXT)")
+            billing._turso_sql(
+                "INSERT INTO kv_store(k, v) VALUES('config_json', ?1) "
+                "ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                [CONFIG_PATH.read_text(encoding="utf-8")])
+    except Exception as e:
+        print(f"[config] turso backup failed: {e}", flush=True)
+
+
+def _restore_config_from_turso() -> None:
+    try:
+        if not billing.turso_enabled():
+            return
+        rows = (billing._turso_sql("SELECT v FROM kv_store WHERE k='config_json'").get("rows") or [])
+        if rows and rows[0] and rows[0][0]:
+            data = json.loads(rows[0][0])
+            if isinstance(data, dict) and data:
+                CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+                CONFIG_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+                print("[startup] restored config.json from Turso", flush=True)
+    except Exception as e:
+        print(f"[startup] config restore failed: {e}", flush=True)
 
 
 def require_admin(request: Request) -> None:
@@ -1135,6 +1165,7 @@ def stream_search_only(cfg: dict, ctx: dict, has_key: bool):
 
 billing.bind(load_config, _admin_given)
 billing.init_db()
+_restore_config_from_turso()
 app.include_router(billing.router)
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
