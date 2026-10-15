@@ -83,16 +83,32 @@ def turso_enabled() -> bool:
 
 
 def _turso_sql(q: str, params=None):
-    body = {"q": q}
-    if params:
-        body["params"] = list(params)
-    r = httpx.post(TURSO_DB_URL.rstrip("/") + "/v2/sql", json=body,
-                   headers={"Authorization": "Bearer " + TURSO_AUTH_TOKEN}, timeout=25)
+    """Run one statement against Turso's HTTP API; returns {"rows": [[val,...],...]}."""
+    args = []
+    for v in params or []:
+        if v is None:
+            args.append({"type": "null"})
+        elif isinstance(v, bool):
+            args.append({"type": "integer", "value": "1" if v else "0"})
+        elif isinstance(v, int):
+            args.append({"type": "integer", "value": str(v)})
+        elif isinstance(v, float):
+            args.append({"type": "float", "value": repr(v)})
+        else:
+            args.append({"type": "text", "value": str(v)})
+    body = {"requests": [{"type": "execute",
+                          "stmt": {"sql": q, "args": args}, "batch_id": None}]}
+    r = httpx.post(TURSO_DB_URL.rstrip("/") + "/v2/pipeline", json=body,
+                   headers={"Authorization": "Bearer " + TURSO_AUTH_TOKEN}, timeout=30)
     r.raise_for_status()
     data = r.json()
-    if isinstance(data, dict) and data.get("error"):
-        raise RuntimeError(str(data["error"]))
-    return data
+    results = (data or {}).get("results") or [{}]
+    res = results[0]
+    if res.get("type") == "error":
+        raise RuntimeError(str((res.get("error") or {}).get("message") or res.get("error")))
+    out = ((res.get("response") or {}).get("result")) or {}
+    rows = [[(c or {}).get("value") for c in row] for row in (out.get("rows") or [])]
+    return {"rows": rows}
 
 
 def backup_now(force: bool = False) -> bool:
