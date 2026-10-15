@@ -37,7 +37,24 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-DB_PATH = Path(os.environ.get("USAGE_DB", Path(__file__).resolve().parent / "usage.db"))
+def _pick_db_path() -> Path:
+    """Prefer USAGE_DB; fall back to the system temp dir when the app folder is
+    read-only (free Docker hosts)."""
+    p = Path(os.environ.get("USAGE_DB", Path(__file__).resolve().parent / "usage.db"))
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        probe = p.parent / f".wtest-{os.getpid()}"
+        probe.write_text("x")
+        probe.unlink()
+        return p
+    except OSError:
+        import tempfile
+        alt = Path(tempfile.gettempdir()) / (p.name or "usage.db")
+        print(f"[billing] {p.parent} is not writable; using {alt} instead", flush=True)
+        return alt
+
+
+DB_PATH = _pick_db_path()
 _lock = threading.Lock()
 INTERVAL_DAYS = {"month": 30, "year": 365, "week": 7}
 

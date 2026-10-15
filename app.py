@@ -55,6 +55,29 @@ _load_env(BASE_DIR / ".env")
 
 KNOWLEDGE_DIR = Path(os.environ.get("KNOWLEDGE_DIR", BASE_DIR / "knowledge")).resolve()
 CONFIG_PATH = Path(os.environ.get("CONFIG_FILE", BASE_DIR / "config.json"))
+
+
+def _seed_writable() -> None:
+    """Free hosts (Render etc.) mount the app directory read-only. When the
+    operator points CONFIG_FILE / KNOWLEDGE_DIR at a writable place (e.g. /tmp),
+    seed those from the copies baked into the image on first boot."""
+    import shutil
+    try:
+        if not CONFIG_PATH.exists():
+            default_cfg = BASE_DIR / "config.json"
+            if default_cfg.exists() and CONFIG_PATH.resolve() != default_cfg.resolve():
+                CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(default_cfg, CONFIG_PATH)
+        if not KNOWLEDGE_DIR.exists():
+            default_kb = BASE_DIR / "knowledge"
+            if default_kb.exists() and KNOWLEDGE_DIR.resolve() != default_kb.resolve():
+                shutil.copytree(default_kb, KNOWLEDGE_DIR, dirs_exist_ok=True)
+        KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:  # never block startup on seeding
+        print(f"[startup] could not seed writable dirs: {e}", flush=True)
+
+
+_seed_writable()
 SERVER_API_KEY = os.environ.get("AI_API_KEY", "").strip()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
 MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "50"))
