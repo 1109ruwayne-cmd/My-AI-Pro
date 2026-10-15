@@ -19,6 +19,8 @@ pay by card, and IP addresses are stored only as a salted hash.
 """
 from __future__ import annotations
 
+import atexit
+import base64
 import hashlib
 import hmac
 import json
@@ -63,6 +65,94 @@ SECRET_FIELDS = ("stripe_secret", "stripe_webhook_secret", "paystack_secret")
 
 # --------------------------------------------------------------------------- storage
 
+# --------------------------------------------------------------------------- persistence
+# Free hosts (Render etc.) wipe the disk whenever the service sleeps or redeploys.
+# When TURSO_DB_URL + TURSO_AUTH_TOKEN are set, the whole (tiny) SQLite file is
+# mirrored into a free Turso database: instantly after every money-relevant write,
+# periodically for the counters, and restored at boot when the local file is gone.
+
+TURSO_DB_URL = os.environ.get("TURSO_DB_URL", "").strip()
+if TURSO_DB_URL.startswith("libsql://"):
+    TURSO_DB_URL = "https://" + TURSO_DB_URL[len("libsql://"):]
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
+_last_backup = 0.0
+
+
+def turso_enabled() -> bool:
+    return TURSO_DB_URL.startswith("http") and bool(TURSO_AUTH_TOKEN)
+
+
+def _turso_sql(q: str, params=None):
+    body = {"q": q}
+    if params:
+        body["params"] = list(params)
+    r = httpx.post(TURSO_DB_URL.rstrip("/") + "/v2/sql", json=body,
+                   headers={"Authorization": "Bearer " + TURSO_AUTH_TOKEN}, timeout=25)
+    r.raise_for_status()
+    data = r.json()
+    if isinstance(data, dict) and data.get("error"):
+        raise RuntimeError(str(data["error"]))
+    return data
+
+
+def backup_now(force: bool = False) -> bool:
+    """Mirror usage.db to Turso. Throttled to once per 2 min unless forced."""
+    global _last_backup
+    if not turso_enabled():
+        return False
+    now = time.time()
+    if not force and now - _last_backup < 120:
+        return False
+    try:
+        with _lock:
+            con = sqlite3.connect(DB_PATH, timeout=20)
+            try:
+                con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            finally:
+                con.close()
+            blob = base64.b64encode(Path(DB_PATH).read_bytes()).decode()
+        _turso_sql("CREATE TABLE IF NOT EXISTS kv_store(k TEXT PRIMARY KEY, v TEXT)")
+        _turso_sql("INSERT INTO kv_store(k, v) VALUES(?1, ?2) "
+                   "ON CONFLICT(k) DO UPDATE SET v=excluded.v", ["usage_db", blob])
+        _last_backup = time.time()
+        return True
+    except Exception as e:  # never take the app down over a backup
+        print(f"[billing] turso backup failed: {e}", flush=True)
+        return False
+
+
+def restore_from_turso() -> bool:
+    """Recreate usage.db from Turso when the local disk came back empty."""
+    if not turso_enabled():
+        return False
+    try:
+        if Path(DB_PATH).exists() and Path(DB_PATH).stat().st_size > 0:
+            return False
+        _turso_sql("CREATE TABLE IF NOT EXISTS kv_store(k TEXT PRIMARY KEY, v TEXT)")
+        res = _turso_sql("SELECT v FROM kv_store WHERE k = 'usage_db'")
+        rows = res.get("rows") or []
+        if rows and rows[0] and rows[0][0]:
+            Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+            Path(DB_PATH).write_bytes(base64.b64decode(rows[0][0]))
+            print("[billing] restored usage.db from Turso backup", flush=True)
+            return True
+    except Exception as e:
+        print(f"[billing] turso restore failed: {e}", flush=True)
+    return False
+
+
+def _backup_loop() -> None:
+    while True:
+        time.sleep(120)
+        backup_now()
+
+
+def _bg_backup() -> None:
+    """Fire-and-forget mirror after a money-relevant write."""
+    if turso_enabled():
+        threading.Thread(target=backup_now, args=(True,), daemon=True).start()
+
+
 def _connect() -> sqlite3.Connection:
     con = sqlite3.connect(DB_PATH, timeout=20)
     con.row_factory = sqlite3.Row
@@ -71,6 +161,7 @@ def _connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    restore_from_turso()
     with _lock, _connect() as con:
         con.executescript("""
         CREATE TABLE IF NOT EXISTS visitors(
@@ -89,6 +180,9 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS coupons(
             code TEXT PRIMARY KEY, days INTEGER, created REAL, uses INTEGER, max_uses INTEGER);
         """)
+    if turso_enabled():
+        threading.Thread(target=_backup_loop, daemon=True).start()
+        atexit.register(backup_now, True)
 
 
 def billing_config(cfg: dict) -> dict:
@@ -287,6 +381,7 @@ def make_manual_payment(cfg: dict, visitor: str) -> dict:
                     "ref, email, created, paid_at, meta) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                     (pid, visitor, "manual", b["price"], b["currency"], "pending", ref, "",
                      time.time(), None, ""))
+    _bg_backup()
     return {"payment_id": pid, "ref": ref, "amount": b["price"], "currency": b["currency"],
             "bank": b["bank"], "pay_note": b["pay_note"]}
 
@@ -304,6 +399,7 @@ def redeem_coupon(cfg: dict, visitor: str, code: str) -> dict:
             raise HTTPException(409, "That code has been used up.")
         until = _new_sub(con, visitor, row["days"], b["plan_name"], "coupon", code)
         con.execute("UPDATE coupons SET uses=uses+1 WHERE code=?", (code,))
+    _bg_backup()
     return {"ok": True, "until": until, "days": row["days"]}
 
 
@@ -315,6 +411,7 @@ def create_coupon(days: int, code: str = "", max_uses: int = 1) -> dict:
                         "VALUES(?,?,?,?,?)", (code, max(1, days), time.time(), 0, max(0, max_uses)))
         except sqlite3.IntegrityError:
             raise HTTPException(409, "That code already exists.")
+    _bg_backup()
     return {"code": code, "days": days, "max_uses": max_uses}
 
 
@@ -322,6 +419,7 @@ def grant_days(visitor: str, days: int, provider: str = "owner") -> dict:
     b_plan = "owner grant"
     with _lock, _connect() as con:
         until = _new_sub(con, visitor, days, b_plan, provider, f"grant-{secrets.token_hex(3)}")
+    _bg_backup()
     return {"ok": True, "until": until}
 
 
@@ -410,6 +508,7 @@ def _activate_from_payment(cfg: dict, provider: str, ref: str, meta_visitor: str
                          provider, ref)
         con.execute("UPDATE payments SET status='paid', paid_at=? WHERE id=?",
                     (time.time(), row["id"]))
+    _bg_backup()
     return {"ok": True, "visitor": visitor, "until": until}
 
 
@@ -579,6 +678,7 @@ async def billing_reject(request: Request):
     pid = str(body.get("payment_id") or "")
     with _lock, _connect() as con:
         con.execute("UPDATE payments SET status='rejected' WHERE id=?", (pid,))
+    _bg_backup()
     return {"ok": True}
 
 

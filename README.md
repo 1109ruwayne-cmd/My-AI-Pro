@@ -224,7 +224,10 @@ methods to offer.
 
 The dashboard also shows visitors, questions, tokens, paywall hits, revenue per currency, lets you
 reject a payment, grant a free subscription, and create coupon codes (percentage-free, day-based,
-with a usage limit). Data lives in `usage.db` (SQLite, next to the app; set `USAGE_DB` to move it).
+with a usage limit). Data lives in `usage.db` (SQLite, next to the app; set `USAGE_DB` to move it). On free hosts the
+disk is wiped whenever the service sleeps or redeploys - set `TURSO_DB_URL` + `TURSO_AUTH_TOKEN`
+(free database at turso.tech) and the app mirrors that file to Turso after every payment event and
+restores it automatically at boot, so subscriptions and revenue survive restarts.
 You - the owner, signed in with the admin password - are never metered or paywalled.
 
 ---
