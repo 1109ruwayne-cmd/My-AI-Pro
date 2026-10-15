@@ -1,0 +1,111 @@
+{
+  "name": "My AI",
+  "provider": "gemini",
+  "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+  "model": "gemini-3.8-flash",
+  "answer_mode": "files_first",
+  "instructions": "You are an expert at coding, every branch of engineering and cybersecurity.\n\nCybersecurity: treat it as a core skill, not an afterthought. Help fully with secure coding and code review, hardening (servers, containers, cloud, networks, endpoints), vulnerability analysis and remediation, threat modelling, logging, detection rules (Sigma, YARA, Suricata), incident response and forensics, penetration testing of systems the owner owns or has written permission to test, CTF challenges, cryptography, and compliance (OWASP ASVS, NIST CSF, ISO 27001, CIS Controls, PCI DSS, POPIA). Rank findings by risk and give exact commands, configs and code to fix them.\n\nThe API Mega List (the files): about 11,700 APIs, mostly Apify tools, sorted into 23 categories (AI, Agents, Automation, Lead Generation, Social Media, Real Estate, Travel and more).\n- When someone wants to find an API, scrape a website, collect data, find leads or automate a task, search the files and recommend the best 3 to 5 matching APIs. For each one give its name, what it does in one line, and its link exactly as written in the files. Explain how they differ (features, price when mentioned). If nothing fits well, say so and suggest the closest options.\n- When asked for code that uses one of these APIs, write it with the apify-client library (Python or JavaScript), including the install command and where to put the API token.\n- Don't push APIs for unrelated coding, engineering or security questions.",
+  "context_chars": 60000,
+  "history_messages": 20,
+  "suggestions": [
+    "Audit this Flask app for security holes and show me the fixes",
+    "Write a Sigma rule that detects credential dumping with Mimikatz",
+    "Which API can scrape Google Maps reviews?",
+    "Build a one-page website for a coffee shop as a single HTML file",
+    "Size a simply supported steel beam for a 6 m span carrying 12 kN/m",
+    "Plot the step response of a mass-spring-damper system in Python"
+  ],
+  "reasoning_effort": "",
+  "auto_route": true,
+  "vtuber_audio": true,
+  "engines": {
+    "main": {
+      "enabled": false,
+      "url": "",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "openhands": {
+      "enabled": false,
+      "url": "http://127.0.0.1:8000",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "dify": {
+      "enabled": false,
+      "url": "http://127.0.0.1/v1",
+      "model": "",
+      "key": "",
+      "extra": {
+        "user": "my-ai",
+        "inputs": {},
+        "conversation_id": ""
+      }
+    },
+    "vtuber": {
+      "enabled": false,
+      "url": "http://127.0.0.1:12393",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "ollama": {
+      "enabled": false,
+      "url": "http://127.0.0.1:11434/v1",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "orca": {
+      "enabled": false,
+      "url": "http://127.0.0.1:11434/v1",
+      "model": "orca-mini",
+      "key": "",
+      "extra": {}
+    },
+    "free": {
+      "enabled": false,
+      "url": "https://openrouter.ai/api/v1",
+      "model": "openrouter/auto",
+      "key": "",
+      "extra": {}
+    },
+    "custom2": {
+      "enabled": false,
+      "url": "",
+      "model": "",
+      "key": "",
+      "extra": {}
+    }
+  },
+  "billing": {
+    "enabled": true,
+    "free_prompts": 15,
+    "free_tokens": 120000,
+    "window": "lifetime",
+    "plan_name": "My AI Pro",
+    "price": "49",
+    "currency": "ZAR",
+    "interval": "month",
+    "providers": {
+      "manual": true,
+      "stripe": false,
+      "paystack": false
+    },
+    "stripe_secret": "",
+    "stripe_webhook_secret": "",
+    "stripe_base": "https://api.stripe.com",
+    "paystack_secret": "",
+    "paystack_base": "https://api.paystack.co",
+    "bank": {
+      "bank": "Capitec Bank",
+      "account_name": "Ruwayne Campher",
+      "account_number": "1317339280",
+      "branch": "470010",
+      "reference_note": ""
+    },
+    "pay_note": ""
+  }
+}
