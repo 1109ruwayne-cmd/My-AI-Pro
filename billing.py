@@ -704,6 +704,20 @@ async def billing_approve(request: Request):
     return _activate_from_payment(_cfg(), row["provider"], row["ref"], row["visitor_id"])
 
 
+@router.post("/api/billing/admin/reset")
+async def billing_reset(request: Request):
+    """Owner-only: wipe all visitor/usage/payment/coupon data (e.g. after testing)."""
+    _require_admin(request)
+    body = await request.json()
+    if str(body.get("confirm") or "") != "RESET":
+        raise HTTPException(400, "Body must include confirm: 'RESET'.")
+    with _lock, _connect() as con:
+        for t in ("usage", "payments", "coupons", "subs", "visitors"):
+            con.execute(f"DELETE FROM {t}")
+    backup_now(force=True)
+    return {"ok": True}
+
+
 @router.post("/api/billing/admin/reject")
 async def billing_reject(request: Request):
     _require_admin(request)
