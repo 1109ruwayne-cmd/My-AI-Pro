@@ -32,6 +32,7 @@ from openai import OpenAI
 
 import billing
 import connectors
+import skills
 from knowledge_base import SUPPORTED_TYPES, KnowledgeBase
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -136,6 +137,7 @@ DEFAULT_CONFIG = {
     "reasoning_effort": "",            # "", "low", "medium" or "high" (how hard the model thinks)
     "auto_route": True,                # hand some questions to other AIs automatically
     "vtuber_audio": True,              # play Open-LLM-VTuber's voice in the chat
+    "skills_enabled": True,            # Agent Skills module: calculator, web search, etc.
     "engines": {},                     # the other AIs: see connectors.ENGINES
     "billing": {},                     # free allowance + subscriptions: see billing.py
 }
@@ -601,6 +603,8 @@ def status():
         "providers": PROVIDERS,
         "engines": connectors.ENGINES,
         "engine_order": connectors.ORDER,
+        "skills": skills.names(),
+        "skills_enabled": skills.enabled(load_config()),
         "free_providers": connectors.FREE_PROVIDERS,
         "server_key": bool(SERVER_API_KEY),
         "admin_required": bool(ADMIN_PASSWORD),
@@ -708,6 +712,8 @@ async def set_config(request: Request):
         cfg["auto_route"] = bool(body["auto_route"])
     if "vtuber_audio" in body:
         cfg["vtuber_audio"] = bool(body["vtuber_audio"])
+    if "skills_enabled" in body:
+        cfg["skills_enabled"] = bool(body["skills_enabled"])
     if isinstance(body.get("engines"), dict):
         cfg["engines"] = _clean_engines(cfg["engines"], body["engines"])
     if isinstance(body.get("billing"), dict):
@@ -818,6 +824,9 @@ async def chat(request: Request):
     # ---- the free allowance: count this visitor, and stop at the paywall
     visitor = billing.visitor_id(request)
     admin_ok = _admin_given(request)
+    if admin_ok:
+        billing.mark_owner(visitor)          # first proof of the password = owner for life
+    admin_ok = admin_ok or billing.is_owner(visitor)
     quota = billing.check_quota(cfg, visitor, admin_ok)
     if not quota["allowed"]:
         await run_in_threadpool(billing.record, cfg, visitor, "paywall", len(asked), 0, True)
@@ -1060,19 +1069,23 @@ def _stream_round(client, kwargs: dict, state: dict):
     raise last_exc
 
 
-def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dict, state: dict):
-    """Let the AI decide when to search the files. Returns {"fallback": bool, "searches": [...]};
-    fallback=True means this model can't use tools, so the caller answers the classic way."""
+def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dict, state: dict,
+                       searchable: bool = True, ctx: dict = None):
+    """Let the AI decide when to search the files and when to use its Agent Skills.
+    Returns {"fallback": bool, "searches": [...]}; fallback=True means this model
+    can't use tools, so the caller answers the classic way."""
     base_url, model = cfg["base_url"], cfg["model"]
     gemini = _is_gemini(base_url)
     budget = max(6000, min(int(cfg.get("context_chars", 60000)) // 4, 40000))  # characters per search
-    ctx = {"mode": "tools", "blocks": [], "files": files}
+    skills_on = skills.enabled(cfg)
+    if ctx is None:
+        ctx = {"mode": "tools", "blocks": [], "files": files}
     messages = [{"role": "system", "content": build_system_prompt(cfg, ctx)}] + to_api_messages(history)
-    tools = [search_tool(files)]
+    tools = ([search_tool(files)] if searchable else []) + (skills.tool_defs() if skills_on else [])
     sources, seen, searches = [], set(), []
     for round_no in range(MAX_TOOL_ROUNDS + 1):
         kwargs = dict(model=model, messages=messages, stream=True, tools=tools, **extra)
-        last_round = round_no == MAX_TOOL_ROUNDS or len(searches) >= MAX_SEARCHES
+        last_round = round_no == MAX_TOOL_ROUNDS
         if last_round:
             kwargs["tool_choice"] = "none"   # enough searching: answer now
         try:
@@ -1089,7 +1102,7 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
         if not calls or last_round:
             return {"fallback": False, "searches": searches}
 
-        calls = calls[:max(1, MAX_SEARCHES - len(searches))]
+        calls = calls[:8]      # per-round sanity cap; the search budget is enforced below
         tool_calls = []
         for i, c in enumerate(calls):
             c["id"] = c["id"] or f"call_{round_no}_{i}"
@@ -1108,9 +1121,19 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
         messages.append(assistant)
 
         for c in calls:
+            tool_name = c["name"] or "search_files"
             query, limit = _parse_search_args(c["args"])
-            if c["name"] and c["name"] != "search_files":
-                result = f"Unknown tool “{c['name']}”. The only tool is search_files."
+            if skills_on and skills.has(tool_name):
+                yield sse({"type": "status",
+                           "text": f"Using skill: {skills.SKILLS[tool_name]['label']}…"})
+                result = skills.run(tool_name, c["args"])
+            elif tool_name != "search_files":
+                result = f"Unknown tool “{tool_name}”."
+            elif not searchable:
+                result = ("The knowledge base is small and its full text is already in your "
+                          "instructions above - answer from that.")
+            elif len(searches) >= MAX_SEARCHES:
+                result = "Search limit reached for this question. Answer with what you have."
             elif not query:
                 result = "The search query was empty. Call search_files again with a few keywords."
             else:
@@ -1125,7 +1148,7 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
                 yield sse({"type": "sources", "sources": sources[:8], "searches": searches, "mode": "tools"})
             tool_msg = {"role": "tool", "tool_call_id": c["id"], "content": result}
             if gemini:
-                tool_msg["name"] = c["name"] or "search_files"
+                tool_msg["name"] = tool_name
             messages.append(tool_msg)
         if state["text"]:
             state["gap"] = True
@@ -1154,8 +1177,17 @@ def stream_answer(cfg: dict, key: str, history: list, query: str):
             # Small knowledge bases are simply read in full; big ones are searched when needed.
             searchable = bool(kb.chunks) and kb.total_chars > int(cfg.get("context_chars", 60000))
         result = None
-        if searchable and _tools_work.get((base_url, model), True):
-            result = yield from _answer_with_tools(client, cfg, history, files, extra, state)
+        skills_on = skills.enabled(cfg)
+        if (searchable or skills_on) and _tools_work.get((base_url, model), True):
+            pre_ctx = None
+            if not searchable:
+                pre_ctx = kb.build_context(query, int(cfg.get("context_chars", 60000)))
+                pre_ctx["files"] = files
+                if pre_ctx.get("sources"):
+                    yield sse({"type": "sources", "sources": pre_ctx["sources"],
+                               "mode": pre_ctx["mode"], "verify": True})
+            result = yield from _answer_with_tools(client, cfg, history, files, extra, state,
+                                                   searchable, pre_ctx)
         if result is None or result["fallback"]:
             state["gap"] = state["text"]
             yield from _answer_classic(client, cfg, history, query, extra, state,

@@ -526,6 +526,7 @@ details.adv[open] summary{margin-bottom:14px}
         <div class="conn-intro" id="connIntro"></div>
         <div id="connList" style="display:flex;flex-direction:column;gap:9px;margin-top:10px"></div>
         <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgVoice" style="margin-top:4px;accent-color:var(--accent)"><span>Play Open-LLM-VTuber's voice in the chat<small>Switch off if you only want its text answers.</small></span></label>
+        <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgSkills" style="margin-top:4px;accent-color:var(--accent)"><span>Agent Skills module<small>Built-in tools your AI uses automatically when helpful: calculator, live web search, date &amp; time, unit converter, text tools and a secure random generator.</small></span></label>
         <div class="help">Keys you type here are saved on the server (config.json) and never shown again. You can also put them in the <b>.env</b> file instead. Everything is optional: your AI works fine with none of them.</div>
       </div>
       <details class="adv">
@@ -956,7 +957,7 @@ details.adv[open] summary{margin-bottom:14px}
       if (!pill) return;
       if (!u.enabled) { pill.hidden = true; return; }
       pill.hidden = false;
-      if (u.admin) { pill.textContent = ' Owner'; pill.title = 'You are signed in as the owner: no limits.'; }
+      if (u.admin) { pill.textContent = u.owner_lifetime ? '\ud83d\udc51 Owner \u00b7 lifetime' : ' Owner'; pill.title = 'Owner account \u2014 activated for life. No limits, no paywall, ever.'; }
       else if (u.subscribed) {
         pill.textContent = '⭐ ' + (u.plan || 'Plus');
         pill.title = u.sub_until ? 'Subscribed until ' + new Date(u.sub_until * 1000).toDateString() : 'Subscribed';
@@ -2338,6 +2339,7 @@ details.adv[open] summary{margin-bottom:14px}
     $('#testResult').hidden = true;
     connDraft = {};
     if ($('#cfgVoice')) $('#cfgVoice').checked = c.vtuber_audio !== false;
+    if ($('#cfgSkills')) $('#cfgSkills').checked = c.skills_enabled !== false;
     var B = c.billing || {};
     var BP = B.providers || {}, BB = B.bank || {};
     if ($('#billEnabled')) $('#billEnabled').checked = B.enabled !== false;
@@ -2452,6 +2454,7 @@ details.adv[open] summary{margin-bottom:14px}
       suggestions: $('#cfgSuggestions').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 6),
       engines: collectConns(),
       vtuber_audio: $('#cfgVoice') ? $('#cfgVoice').checked : true,
+      skills_enabled: $('#cfgSkills') ? $('#cfgSkills').checked : true,
       billing: {
         enabled: $('#billEnabled').checked,
         free_prompts: Number($('#billPrompts').value) || 0,

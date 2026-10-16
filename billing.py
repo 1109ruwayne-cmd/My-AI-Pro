@@ -198,7 +198,8 @@ def init_db() -> None:
     with _lock, _connect() as con:
         con.executescript("""
         CREATE TABLE IF NOT EXISTS visitors(
-            id TEXT PRIMARY KEY, first_seen REAL, last_seen REAL, ip_hash TEXT, ua TEXT);
+            id TEXT PRIMARY KEY, first_seen REAL, last_seen REAL, ip_hash TEXT, ua TEXT,
+            owner INTEGER DEFAULT 0);
         CREATE TABLE IF NOT EXISTS usage(
             id INTEGER PRIMARY KEY AUTOINCREMENT, visitor_id TEXT, ts REAL,
             engine TEXT, tokens_in INTEGER, tokens_out INTEGER, blocked INTEGER DEFAULT 0);
@@ -213,6 +214,10 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS coupons(
             code TEXT PRIMARY KEY, days INTEGER, created REAL, uses INTEGER, max_uses INTEGER);
         """)
+        try:   # migration: databases created before the lifetime-owner flag existed
+            con.execute("ALTER TABLE visitors ADD COLUMN owner INTEGER DEFAULT 0")
+        except Exception:
+            pass
     if turso_enabled():
         threading.Thread(target=_backup_loop, daemon=True).start()
         atexit.register(backup_now, True)
@@ -282,6 +287,23 @@ def merge_billing(old: dict, incoming: dict) -> dict:
 
 
 # --------------------------------------------------------------------------- visitors
+
+def mark_owner(vid: str) -> None:
+    """Flag this visitor as the owner: activated for life, never metered, no paywall.
+    Called the moment a request proves the admin password for this visitor id."""
+    if not vid:
+        return
+    with _lock, _connect() as con:
+        con.execute("UPDATE visitors SET owner=1 WHERE id=? AND COALESCE(owner,0)=0", (vid,))
+
+
+def is_owner(vid: str) -> bool:
+    """True when this visitor id was marked as the owner before (lifetime activation)."""
+    if not vid:
+        return False
+    with _lock, _connect() as con:
+        row = con.execute("SELECT owner FROM visitors WHERE id=?", (vid,)).fetchone()
+    return bool(row and row["owner"])
 
 def visitor_id(request: Request) -> str:
     vid = (request.headers.get("x-visitor") or "").strip()
@@ -378,6 +400,7 @@ def usage_payload(cfg: dict, visitor: str, admin_ok: bool) -> dict:
         "left_tokens": left_t,
         "window": b["window"],
         "subscribed": active or admin_ok,
+        "owner_lifetime": admin_ok and is_owner(visitor),
         "sub_until": sub["until"] if sub else None,
         "plan": b["plan_name"],
         "price": b["price"],
@@ -640,6 +663,9 @@ async def get_usage(request: Request):
     cfg = _cfg()
     vid = visitor_id(request)
     admin_ok = _is_admin(request)
+    if admin_ok:
+        mark_owner(vid)                      # proved the password once -> owner for life
+    admin_ok = admin_ok or is_owner(vid)
     return JSONResponse(usage_payload(cfg, vid, admin_ok),
                         headers={"X-Visitor-Id": vid})
 
