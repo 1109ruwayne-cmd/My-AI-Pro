@@ -126,6 +126,7 @@ PROVIDERS = {
 
 DEFAULT_CONFIG = {
     "name": "My AI",
+    "creator": "Ruwayne",                # shown in the sidebar: "created by ..."
     "provider": "gemini",
     "base_url": PROVIDERS["gemini"]["base_url"],
     "model": PROVIDERS["gemini"]["model"],
@@ -677,6 +678,8 @@ async def set_config(request: Request):
     cfg = load_config()
     if "name" in body:
         cfg["name"] = str(body["name"]).strip()[:60] or "My AI"
+    if "creator" in body:
+        cfg["creator"] = str(body["creator"]).strip()[:40] or "Ruwayne"
     if body.get("provider") in PROVIDERS:
         cfg["provider"] = body["provider"]
     if "base_url" in body:
@@ -1015,7 +1018,9 @@ def _merge_tool_call(calls: list, tc) -> None:
 
 # Free Gemini keys only serve the Flash family, so when one model is busy or
 # rate-limited we simply try the next one before giving up.
-GEMINI_FALLBACKS = ("gemini-3.8-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+# Verified against the free key's /models list: these ids all exist.
+GEMINI_FALLBACKS = ("gemini-flash-latest", "gemini-3.5-flash", "gemini-2.5-flash",
+                    "gemini-flash-lite-latest", "gemini-2.5-flash-lite")
 
 
 def _model_chain(cfg: dict) -> list:
@@ -1061,11 +1066,13 @@ def _stream_round(client, kwargs: dict, state: dict):
             return "".join(text), calls, finish
         except Exception as exc:
             last_exc = exc
+            state["last_model"] = model
             status = getattr(exc, "status_code", None)
             if emitted or status in (400, 401, 403) or i == len(chain) - 1:
                 raise
+            why = "isn't available" if status == 404 else "is busy"
             yield sse({"type": "status",
-                       "text": f"{model} is busy - switching to {chain[i + 1]}…"})
+                       "text": f"{model} {why} - switching to {chain[i + 1]}…"})
     raise last_exc
 
 
@@ -1198,7 +1205,8 @@ def stream_answer(cfg: dict, key: str, history: list, query: str):
         if state["length"]:
             yield sse({"type": "notice", "kind": "length"})
     except Exception as exc:
-        yield sse({"type": "error", "message": friendly_error(exc, base_url, model)})
+        yield sse({"type": "error",
+                   "message": friendly_error(exc, base_url, state.get("last_model") or model)})
     yield sse({"type": "done"})
 
 

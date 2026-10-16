@@ -366,6 +366,7 @@ details.adv[open] summary{margin-bottom:14px}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>
         Settings
       </button>
+      <div id="creatorCredit" style="font-size:11px;opacity:.65;text-align:center">created by <b>Ruwayne</b></div>
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -440,6 +441,10 @@ details.adv[open] summary{margin-bottom:14px}
       <div class="field">
         <label class="lbl" for="cfgName">Your AI's name</label>
         <input class="input" id="cfgName" maxlength="60" placeholder="My AI">
+      </div>
+      <div class="field">
+        <label class="lbl" for="cfgCreator">Created by (shown in the sidebar)</label>
+        <input class="input" id="cfgCreator" maxlength="40" placeholder="Ruwayne">
       </div>
       <div class="field">
         <label class="lbl" for="cfgProvider">AI brain (provider)</label>
@@ -526,7 +531,7 @@ details.adv[open] summary{margin-bottom:14px}
         <div class="conn-intro" id="connIntro"></div>
         <div id="connList" style="display:flex;flex-direction:column;gap:9px;margin-top:10px"></div>
         <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgVoice" style="margin-top:4px;accent-color:var(--accent)"><span>Play Open-LLM-VTuber's voice in the chat<small>Switch off if you only want its text answers.</small></span></label>
-        <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgSkills" style="margin-top:4px;accent-color:var(--accent)"><span>Agent Skills module<small>Built-in tools your AI uses automatically when helpful: calculator, live web search, date &amp; time, unit converter, text tools and a secure random generator.</small></span></label>
+        <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgSkills" style="margin-top:4px;accent-color:var(--accent)"><span>Agent Skills module<small>17 built-in tools your AI uses automatically when helpful: calculator, live web search, weather, exchange rates, Wikipedia, dictionary, date &amp; time, timezones, unit converter, finance maths, JSON &amp; regex tools, QR codes, text tools, password audit and a secure random generator.</small></span></label>
         <div class="help">Keys you type here are saved on the server (config.json) and never shown again. You can also put them in the <b>.env</b> file instead. Everything is optional: your AI works fine with none of them.</div>
       </div>
       <details class="adv">
@@ -1448,6 +1453,8 @@ details.adv[open] summary{margin-bottom:14px}
       S.status = st;
       var c = st.config, ok = aiConnected();
       document.title = c.name || 'My AI';
+      var cr = $('#creatorCredit');
+      if (cr) { cr.textContent = 'created by '; var cb = document.createElement('b'); cb.textContent = c.creator || 'Ruwayne'; cr.appendChild(cb); }
       $('#brandName').textContent = c.name;
       $('#topTitle').textContent = c.name;
       $('#logo').textContent = initials(c.name);
@@ -2321,6 +2328,7 @@ details.adv[open] summary{margin-bottom:14px}
     if (!S.status) { toast('Still connecting to the server…'); return; }
     var c = S.status.config, P = S.status.providers;
     $('#cfgName').value = c.name || '';
+    if ($('#cfgCreator')) $('#cfgCreator').value = c.creator || 'Ruwayne';
     var sel = $('#cfgProvider');
     sel.innerHTML = Object.keys(P).map(function (id) { return '<option value="' + id + '">' + esc(P[id].label) + '</option>'; }).join('');
     sel.value = P[c.provider] ? c.provider : 'custom';
@@ -2443,6 +2451,7 @@ details.adv[open] summary{margin-bottom:14px}
     var id = $('#cfgProvider').value, checked = document.querySelector('input[name=mode]:checked');
     var body = {
       name: $('#cfgName').value.trim() || 'My AI',
+      creator: ($('#cfgCreator') ? $('#cfgCreator').value.trim() : '') || 'Ruwayne',
       provider: id,
       base_url: $('#cfgBaseUrl').value.trim(),
       model: $('#cfgModel').value.trim(),
