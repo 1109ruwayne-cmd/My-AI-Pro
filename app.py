@@ -1004,29 +1004,60 @@ def _merge_tool_call(calls: list, tc) -> None:
         target["extra"] = extra
 
 
+# Free Gemini keys only serve the Flash family, so when one model is busy or
+# rate-limited we simply try the next one before giving up.
+GEMINI_FALLBACKS = ("gemini-3.8-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+
+
+def _model_chain(cfg: dict) -> list:
+    model = str(cfg.get("model") or "")
+    base = str(cfg.get("base_url") or "")
+    if (cfg.get("provider") == "gemini" or "generativelanguage" in base
+            or model.startswith("gemini")):
+        return [m for m in GEMINI_FALLBACKS if m != model]
+    return []
+
+
 def _stream_round(client, kwargs: dict, state: dict):
-    """One request to the AI. Streams its text to the browser; returns (text, tool calls, finish reason)."""
-    text, calls, finish = [], [], None
-    for event in client.chat.completions.create(**kwargs):
-        choices = getattr(event, "choices", None)
-        if not choices:
-            continue
-        choice = choices[0]
-        delta = choice.delta
-        if delta is not None:
-            piece = getattr(delta, "content", None)
-            if piece:
-                if state["gap"]:          # text after a search starts a new paragraph
-                    piece = "\n\n" + piece.lstrip()
-                    state["gap"] = False
-                state["text"] = True
-                text.append(piece)
-                yield sse({"type": "delta", "text": piece})
-            for tc in getattr(delta, "tool_calls", None) or []:
-                _merge_tool_call(calls, tc)
-        if choice.finish_reason:
-            finish = choice.finish_reason
-    return "".join(text), calls, finish
+    """One request to the AI. Streams its text to the browser; returns (text, tool calls,
+    finish reason). If the model fails before sending anything (busy, rate-limited,
+    missing), it automatically switches to the next fallback model."""
+    first = kwargs.get("model")
+    chain = [first] + [m for m in (state.get("chain") or []) if m != first]
+    emitted, last_exc = False, None
+    for i, model in enumerate(chain):
+        text, calls, finish = [], [], None
+        try:
+            for event in client.chat.completions.create(**dict(kwargs, model=model)):
+                choices = getattr(event, "choices", None)
+                if not choices:
+                    continue
+                choice = choices[0]
+                delta = choice.delta
+                if delta is not None:
+                    piece = getattr(delta, "content", None)
+                    if piece:
+                        emitted = True
+                        if state["gap"]:      # text after a search starts a new paragraph
+                            piece = "\n\n" + piece.lstrip()
+                            state["gap"] = False
+                        state["text"] = True
+                        text.append(piece)
+                        yield sse({"type": "delta", "text": piece})
+                    for tc in getattr(delta, "tool_calls", None) or []:
+                        _merge_tool_call(calls, tc)
+                if choice.finish_reason:
+                    finish = choice.finish_reason
+            state["model"] = model
+            return "".join(text), calls, finish
+        except Exception as exc:
+            last_exc = exc
+            status = getattr(exc, "status_code", None)
+            if emitted or status in (400, 401, 403) or i == len(chain) - 1:
+                raise
+            yield sse({"type": "status",
+                       "text": f"{model} is busy - switching to {chain[i + 1]}…"})
+    raise last_exc
 
 
 def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dict, state: dict):
@@ -1114,7 +1145,7 @@ def _answer_classic(client, cfg: dict, history: list, query: str, extra: dict, s
 
 def stream_answer(cfg: dict, key: str, history: list, query: str):
     base_url, model = cfg["base_url"], cfg["model"]
-    state = {"text": False, "gap": False, "length": False}
+    state = {"text": False, "gap": False, "length": False, "chain": _model_chain(cfg)}
     extra = {"reasoning_effort": cfg["reasoning_effort"]} if cfg.get("reasoning_effort") else {}
     try:
         client = OpenAI(api_key=key, base_url=base_url, timeout=300, max_retries=1)
