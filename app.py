@@ -197,6 +197,7 @@ DEFAULT_CONFIG = {
     "auto_route": True,                # hand some questions to other AIs automatically
     "vtuber_audio": True,              # play Open-LLM-VTuber's voice in the chat
     "skills_enabled": True,            # Agent Skills module: calculator, web search, etc.
+    "ifixai": True,                    # I FIX AI module: repair-specialist mode
     "engines": {},                     # the other AIs: see connectors.ENGINES
     "billing": {},                     # free allowance + subscriptions: see billing.py
 }
@@ -818,6 +819,8 @@ async def set_config(request: Request):
         cfg["vtuber_audio"] = bool(body["vtuber_audio"])
     if "skills_enabled" in body:
         cfg["skills_enabled"] = bool(body["skills_enabled"])
+    if "ifixai" in body:
+        cfg["ifixai"] = bool(body["ifixai"])
     if isinstance(body.get("engines"), dict):
         cfg["engines"] = _clean_engines(cfg["engines"], body["engines"])
     if isinstance(body.get("billing"), dict):
