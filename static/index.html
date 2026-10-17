@@ -389,6 +389,7 @@ details.adv[open] summary{margin-bottom:14px}
     <div class="messages" id="messages"><div class="thread" id="thread"></div></div>
 
     <div class="composer" id="composer">
+      <div class="banner" id="verifyBanner" hidden></div>
       <div class="banner" id="keyBanner" hidden>
         <span>🔌 <b>No AI connected yet.</b> Add a free API key to get answers, code and engineering help. Until then I can only search your files.</span>
         <button class="btn small primary" type="button" id="bannerBtn">Connect AI</button>
@@ -968,11 +969,28 @@ details.adv[open] summary{margin-bottom:14px}
       else if (u.subscribed) {
         pill.textContent = '⭐ ' + (u.plan || 'Plus');
         pill.title = u.sub_until ? 'Subscribed until ' + new Date(u.sub_until * 1000).toDateString() : 'Subscribed';
+      } else if (u.verifying) {
+        var vm = Math.max(0, Math.round((u.verify_until - Date.now() / 1000) / 60));
+        pill.textContent = '⏳ Verifying payment · ' + (vm >= 60 ? Math.floor(vm / 60) + 'h ' + (vm % 60) + 'm' : vm + 'm') + ' left';
+        pill.title = 'Payment submitted - the owner is confirming it. Full access while you wait.';
       } else if (u.left_prompts !== null) {
         pill.textContent = 'Free · ' + u.left_prompts + ' question' + (u.left_prompts === 1 ? '' : 's') + ' left';
         pill.title = u.free_prompts + ' free questions and about ' +
           Math.round(u.free_tokens / 1000) + 'k free tokens per visitor';
       } else { pill.textContent = 'Free'; }
+      var vb = $('#verifyBanner');
+      if (vb) {
+        if (u.verifying) {
+          var lp = store.get('myai.lastpay', {}) || {};
+          var vm2 = Math.max(0, Math.round((u.verify_until - Date.now() / 1000) / 60));
+          var left2 = vm2 >= 60 ? Math.floor(vm2 / 60) + 'h ' + (vm2 % 60) + 'm' : vm2 + ' min';
+          vb.innerHTML = '⏳ Payment being verified - ' + left2 + ' of full access left.' +
+            (lp.ref ? ' EFT reference: <code>' + esc(lp.ref) + '</code>' +
+              (u.bank && u.bank.account_number ? ' · ' + esc(u.bank.bank || '') + ' · ' +
+               esc(u.bank.account_number) + ' · ' + esc(u.bank.account_name || '') : '') : '');
+          vb.hidden = false;
+        } else { vb.hidden = true; }
+      }
     }).catch(function () { /* offline: keep the old numbers */ });
   }
 
@@ -980,7 +998,9 @@ details.adv[open] summary{margin-bottom:14px}
 
   function paywallHtml(q) {
     var per = q.interval === 'year' ? '/year' : q.interval === 'week' ? '/week' : '/month';
-    var h = '<div class="paywall"><div class="pw-head">🔒 Your free allowance is used up</div>' +
+    var h = '<div class="paywall">' +
+      (q.verify_expired ? '<div class="pw-note" style="margin-bottom:8px">⏳ Your 3-hour verification window has ended. Your payment is still waiting for the owner to confirm - your subscription activates the moment they approve.</div>' : '') +
+      '<div class="pw-head">🔒 Your free allowance is used up</div>' +
       '<p class="pw-sub">You asked ' + q.prompts_used + ' free question' + (q.prompts_used === 1 ? '' : 's') +
       (q.reason === 'tokens' ? ' and reached the free token limit' : '') +
       '. Continue with ' + esc(q.plan || 'the subscription') + ':</p>' +
@@ -1017,6 +1037,32 @@ details.adv[open] summary{margin-bottom:14px}
     if (el) { el.textContent = msg; el.className = 'pw-status ' + (kind || ''); }
   }
 
+  function verifyHtml(q) {
+    var u = S.usage || {};
+    var mins = Math.max(0, Math.round(((u.verify_until || 0) - Date.now() / 1000) / 60));
+    var left = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' min';
+    var lp = store.get('myai.lastpay', {}) || {};
+    var h = '<div class="paywall"><div class="pw-head">⏳ Payment being verified - ' + left + ' of access left</div>' +
+      '<p class="pw-sub">Full access is on while the owner confirms your payment. ' +
+      'Complete the EFT with your reference below - your 30-day ' + esc(q.plan || 'subscription') +
+      ' activates the moment it is approved.</p>';
+    if (q.bank && q.bank.account_number) {
+      h += '<div class="pw-bank">' +
+        '<b>Bank</b><span>' + esc(q.bank.bank || '-') + '</span>' +
+        '<b>Account name</b><span>' + esc(q.bank.account_name || '-') + '</span>' +
+        '<b>Account number</b><code>' + esc(q.bank.account_number || '-') + '</code>' +
+        '<b>Branch</b><code>' + esc(q.bank.branch || '-') + '</code>' +
+        '<b>Amount</b><span>' + cur(q.currency) + esc(q.price) + '</span>' +
+        (lp.ref ? '<b>Reference</b><code>' + esc(lp.ref) + '</code>' : '') + '</div>';
+    }
+    h += '<div class="pw-row">' +
+      (lp.ref ? '' : '<button class="btn small" type="button" data-pw="manual">Get payment details</button>') +
+      '<button class="btn small" type="button" data-pw="refresh">I\'ve paid - check again</button></div>' +
+      (q.pay_note ? '<div class="pw-note">' + esc(q.pay_note) + '</div>' : '') +
+      '<div class="pw-status" data-pw="status"></div></div>';
+    return h;
+  }
+
   function bindPaywall(card, q) {
     each(card.querySelectorAll('[data-pw]'), function (el) {
       if (el.tagName !== 'BUTTON') return;
@@ -1048,7 +1094,13 @@ details.adv[open] summary{margin-bottom:14px}
                   '<div class="pw-note">Use the reference exactly as shown so the owner can match ' +
                   'your payment. It is confirmed by hand - usually within a day.</div>';
               }
-              pwStatus(card, 'Now press “I\'m subscribed - check again” after you\'ve paid.', 'ok');
+              if (d.verify_until) {
+                store.set('myai.lastpay', { ref: d.ref, verify_until: d.verify_until });
+                pwStatus(card, '⏳ You now have 3 hours of full access while the owner verifies your EFT. Pay with the reference above - your 30-day subscription activates the moment it is approved.', 'ok');
+                refreshUsage();
+              } else {
+                pwStatus(card, 'Now press “I\'m subscribed - check again” after you\'ve paid.', 'ok');
+              }
             }).catch(function (e) { pwStatus(card, e.message, 'bad'); });
         } else if (kind === 'coupon-go') {
           var code = (card.querySelector('[data-pw="coupon"]') || {}).value || '';
@@ -1062,6 +1114,7 @@ details.adv[open] summary{margin-bottom:14px}
           pwStatus(card, 'Checking…');
           refreshUsage().then(function () {
             if (S.usage && S.usage.subscribed) { renderThread(); toast('Subscription active ✓ Welcome back!'); }
+            else if (S.usage && S.usage.verifying) { renderThread(); pwStatus(card, 'Still being verified by the owner - your full access continues in the meantime.', 'ok'); }
             else pwStatus(card, 'No active subscription found yet for this browser.', 'bad');
           });
         } else if (kind === 'owner-go') {
@@ -1096,6 +1149,7 @@ details.adv[open] summary{margin-bottom:14px}
         '<span class="dstat"><b>' + Math.round((d.tokens || 0) / 1000) + 'k</b> tokens</span>' +
         '<span class="dstat"><b>' + d.blocked_prompts + '</b> hit the paywall</span>' +
         '<span class="dstat"><b>' + d.active_subs + '</b> active subscriptions</span>' +
+        '<span class="dstat"><b>' + (d.verifying || 0) + '</b> in 3-h verification</span>' +
         (d.revenue || []).map(function (r) {
           return '<span class="dstat"><b>' + cur(r.currency) + r.total + '</b> earned (' + r.payments + ' paid)</span>';
         }).join('') + '</div>';
@@ -1106,11 +1160,14 @@ details.adv[open] summary{margin-bottom:14px}
           d.pending.map(function (p) {
             return '<tr><td><code>' + esc(p.visitor_id.slice(0, 10)) + '</code></td><td>' +
               cur(p.currency) + esc(p.amount) + '</td><td><code>' + esc(p.ref) + '</code></td><td>' +
-              new Date(p.created * 1000).toLocaleDateString() + '</td><td>' +
+              new Date(p.created * 1000).toLocaleDateString() +
+              (p.verify_expires && p.verify_expires > Date.now() / 1000 ? ' ⏳' : '') + '</td><td>' +
               '<button class="btn small" type="button" data-appr="' + esc(p.id) + '">Approve</button> ' +
               '<button class="btn small" type="button" data-rej="' + esc(p.id) + '">Reject</button></td></tr>';
           }).join('') + '</table>';
       }
+      h += '<div class="lbl" style="margin-top:10px">🛡 Security - the AI defending itself</div>' +
+        '<div id="secBox"><div class="help">Loading…</div></div>';
       h += '<div class="lbl" style="margin-top:10px">Coupons</div>' +
         '<div class="row"><input class="input" id="cpDays" type="number" value="30" min="1" style="max-width:90px" title="Days free">' +
         '<input class="input" id="cpCode" placeholder="code (blank = random)" style="max-width:160px">' +
@@ -1159,6 +1216,36 @@ details.adv[open] summary{margin-bottom:14px}
             days: Number(box.querySelector('#grDays').value) || 30 }) })
           .then(function () { toast('Granted.'); loadDashboard(); })
           .catch(function (e) { toast(e.message, 'error'); });
+      });
+      api('api/billing/admin/security').then(function (sec) {
+        var sb = box.querySelector('#secBox'); if (!sb) return;
+        var sh = '';
+        if ((sec.bans || []).length) {
+          sh += '<div class="help">Blocked right now: ' + sec.bans.map(function (b) {
+            return '<code>' + esc(String(b.ip).slice(0, 8)) + '…</code> (' + Math.ceil(b.seconds_left / 60) + ' min left)';
+          }).join(', ') + '</div>';
+        }
+        if (!(sec.events || []).length) sh += '<div class="help">All quiet - no attacks detected yet.</div>';
+        else {
+          sh += '<table class="dash-tbl"><tr><th>When</th><th>Event</th><th>IP</th><th>Detail</th></tr>' +
+            sec.events.slice(0, 25).map(function (ev) {
+              return '<tr><td>' + new Date(ev.ts * 1000).toLocaleString() + '</td>' +
+                '<td><code>' + esc(ev.kind) + '</code></td>' +
+                '<td><code>' + esc(String(ev.ip || '').slice(0, 8)) + '…</code></td>' +
+                '<td>' + esc(ev.detail || '') + '</td></tr>';
+            }).join('') + '</table>';
+        }
+        sh += '<div class="row" style="margin-top:6px"><button class="btn small" type="button" id="secClear">Clear log & unblock everyone</button></div>';
+        sb.innerHTML = sh;
+        var sc = sb.querySelector('#secClear');
+        if (sc) sc.addEventListener('click', function () {
+          api('api/billing/admin/security/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(function () { toast('Security log cleared, blocks lifted.'); loadDashboard(); })
+            .catch(function (e) { toast(e.message, 'error'); });
+        });
+      }).catch(function () {
+        var sb = box.querySelector('#secBox');
+        if (sb) sb.innerHTML = '<div class="help">Security panel unavailable.</div>';
       });
     }).catch(function (e) { box.innerHTML = '<div class="test-result bad">' + esc(e.message) + '</div>'; });
   }
@@ -1760,7 +1847,9 @@ details.adv[open] summary{margin-bottom:14px}
     if (live) { extra.innerHTML = ''; return; }
 
     var html = '', sources = visibleSources(m), last = isLastMessage(m) && !S.streaming;
-    if (m.quota && !(S.usage && (S.usage.subscribed || S.usage.admin))) html += paywallHtml(m.quota);
+    if (m.quota && !(S.usage && (S.usage.subscribed || S.usage.admin))) {
+      html += (S.usage && S.usage.verifying) ? verifyHtml(m.quota) : paywallHtml(m.quota);
+    }
     if (m.engine && m.engine !== 'main') {
       html += '<div class="engine-badge"><span>' + esc(m.engineIcon || '🔌') + '</span>' +
         '<b>' + esc(m.engineLabel || m.engine) + '</b>' +

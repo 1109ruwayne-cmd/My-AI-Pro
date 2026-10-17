@@ -15,6 +15,10 @@ ADMIN_FAIL_MAX = 10        # wrong admin passwords ...
 ADMIN_FAIL_WINDOW = 600    # ... within 10 minutes ...
 ADMIN_LOCKOUT = 600        # ... lock that IP out for 10 minutes
 
+AUTO_BAN_BLOCKS = 8        # an IP that trips any limiter 8 times ...
+AUTO_BAN_WINDOW = 900      # ... within 15 minutes ...
+AUTO_BAN_SECONDS = 1800    # ... is banned outright for 30 minutes
+
 
 class _SlidingWindow:
     def __init__(self) -> None:
@@ -54,6 +58,8 @@ def hit(key: str, max_hits: int, window: float):
 
 _fails: dict = {}
 _locks: dict = {}
+_bans: dict = {}
+_blockhist: dict = {}
 _flock = threading.Lock()
 
 
@@ -91,3 +97,44 @@ def admin_success(ip: str) -> None:
     with _flock:
         _fails.pop(ip, None)
         _locks.pop(ip, None)
+        _bans.pop(ip, None)          # proving the owner password always lifts a ban
+        # note: _blockhist stays - owner traffic must not erase an attacker's strikes
+
+
+# --- autonomous escalation: repeat abusers get banned automatically ---------
+
+def register_block(ip: str) -> bool:
+    """Count one limiter trip. Returns True when this trip triggered a ban."""
+    now = time.time()
+    with _flock:
+        hist = [t for t in _blockhist.get(ip, ()) if now - t < AUTO_BAN_WINDOW]
+        hist.append(now)
+        if len(hist) >= AUTO_BAN_BLOCKS:
+            _bans[ip] = now + AUTO_BAN_SECONDS
+            _blockhist[ip] = []
+            return True
+        _blockhist[ip] = hist
+        return False
+
+
+def ip_banned(ip: str) -> bool:
+    with _flock:
+        return _bans.get(ip, 0) > time.time()
+
+
+def ban_retry_after(ip: str) -> int:
+    with _flock:
+        return max(0, int(_bans.get(ip, 0) - time.time()) + 1)
+
+
+def clear_bans() -> None:
+    with _flock:
+        _bans.clear()
+        _blockhist.clear()
+
+
+def bans_snapshot() -> list:
+    now = time.time()
+    with _flock:
+        return [{"ip": ip, "seconds_left": int(exp - now)}
+                for ip, exp in _bans.items() if exp > now]

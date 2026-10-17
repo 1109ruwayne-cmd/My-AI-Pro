@@ -116,8 +116,15 @@ hosted services; the site works fully without any of them.
   Campher**, account number **1317339280**, universal branch code **470010**.
   The paywall shows a unique reference like **MA-XXXX-XXXXXX** that the payer
   must use so the owner can match the payment.
-- Payments are confirmed by hand: the owner approves them on the dashboard,
-  usually within a day. Approval instantly unlocks 30 days of unlimited use.
+- **3-hour verification window**: the moment a visitor requests payment
+  details ("I've paid" / Pay by EFT), they get **3 hours of full access**
+  while the owner verifies the money arrived in the bank. Their pill shows
+  "⏳ Verifying payment" with a countdown. If the owner approves within the
+  window, the full 30-day subscription starts; if the owner rejects, access
+  stops immediately; if the window expires unconfirmed, the paywall returns
+  with a "waiting for the owner to confirm" note and the subscription still
+  activates whenever approval happens. Each visitor gets the verification
+  window **once** - it cannot be farmed for free access.
 - The owner can also create **coupon codes** (free days) and grant days
   manually. Stripe and Paystack card payments are built in and activate the
   moment the owner pastes their keys into Settings.
@@ -135,6 +142,14 @@ hosted services; the site works fully without any of them.
 - Brute-force lockout: 10 wrong admin-password attempts from one IP within
   10 minutes lock that IP out for 10 minutes - everywhere the password is
   checked (config, dashboard, payments, usage).
+- **Autonomous internal defence**: the protections run by themselves with no
+  outside service. Every trip (chat-limit, payment-spam, coupon-guessing,
+  wrong admin password, lockout) is written to an internal security log in
+  the database. An IP that trips the limiters 8 times within 15 minutes is
+  **automatically banned for 30 minutes** - all its chat and billing requests
+  get refused. Proving the owner password always lifts a ban instantly.
+  The owner sees everything in the dashboard's "🛡 Security" panel (recent
+  events, active blocks, one-click "Clear log & unblock everyone").
 - Money integrity: the subscription price is read server-side from the
   owner's config - a visitor can never set or change the amount; every EFT
   gets a unique reference (MA-XXXX-XXXXXX); subscriptions activate only when

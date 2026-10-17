@@ -77,6 +77,7 @@ DEFAULT_BILLING = {
     "paystack_base": "https://api.paystack.co",
     "bank": {"bank": "", "account_name": "", "account_number": "", "branch": "", "reference_note": ""},
     "pay_note": "",                # e.g. "WhatsApp me the proof of payment: 082 …"
+    "verify_hours": 3,             # instant access while the owner verifies the EFT
 }
 
 SECRET_FIELDS = ("stripe_secret", "stripe_webhook_secret", "paystack_secret")
@@ -215,9 +216,15 @@ def init_db() -> None:
             paid_at REAL, meta TEXT);
         CREATE TABLE IF NOT EXISTS coupons(
             code TEXT PRIMARY KEY, days INTEGER, created REAL, uses INTEGER, max_uses INTEGER);
+        CREATE TABLE IF NOT EXISTS security_log(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, ip TEXT, detail TEXT);
         """)
         try:   # migration: databases created before the lifetime-owner flag existed
             con.execute("ALTER TABLE visitors ADD COLUMN owner INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        try:   # migration: databases created before the 3-hour verification window existed
+            con.execute("ALTER TABLE payments ADD COLUMN verify_expires REAL")
         except Exception:
             pass
     if turso_enabled():
@@ -355,6 +362,73 @@ def usage_totals(b: dict, visitor: str) -> dict:
     return {"prompts": row["prompts"], "tokens": row["tokens"]}
 
 
+def verify_state(visitor: str):
+    """(verify_until, expired) for a visitor's 3-hour payment-verification window.
+
+    verify_until is the epoch second the window ends while it is still running,
+    expired=True when a window ran out without the owner confirming yet."""
+    now = time.time()
+    with _lock, _connect() as con:
+        rows = con.execute("SELECT verify_expires FROM payments WHERE visitor_id=? "
+                           "AND status='pending' AND verify_expires IS NOT NULL",
+                           (visitor,)).fetchall()
+    live = [r["verify_expires"] for r in rows if r["verify_expires"] > now]
+    if live:
+        return max(live), False
+    return None, bool(rows)
+
+
+def hash_ip(ip: str) -> str:
+    salt = os.environ.get("ADMIN_PASSWORD", "myai")
+    return hashlib.sha256(f"{salt}:{ip}".encode()).hexdigest()[:16] if ip else ""
+
+
+def log_security_event(kind: str, ip: str, detail: str = "") -> None:
+    """Append to the internal security log (keeps the newest 300 events)."""
+    try:
+        with _lock, _connect() as con:
+            con.execute("INSERT INTO security_log(ts, kind, ip, detail) VALUES(?,?,?,?)",
+                        (time.time(), kind, hash_ip(ip), str(detail)[:200]))
+            con.execute("DELETE FROM security_log WHERE id NOT IN "
+                        "(SELECT id FROM security_log ORDER BY id DESC LIMIT 300)")
+    except Exception:
+        pass
+
+
+def security_events(limit: int = 50) -> list:
+    try:
+        with _lock, _connect() as con:
+            rows = con.execute("SELECT ts, kind, ip, detail FROM security_log "
+                               "ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def abuse_event(request: Request, kind: str, detail: str = "") -> None:
+    """Log one limiter trip; the limiter autonomously escalates repeat abusers."""
+    ip = ratelimit.client_ip(request)
+    log_security_event(kind, ip, detail)
+    if ratelimit.register_block(ip):
+        log_security_event("auto_ban", ip, "30-minute automatic ban after repeated abuse")
+
+
+def ban_gate(request: Request, vid: str = "") -> None:
+    """429 when this IP was auto-banned. Owners (password or lifetime) pass."""
+    if vid and is_owner(vid):
+        return
+    if _is_admin is not None:
+        try:
+            if _is_admin(request):
+                return
+        except HTTPException:
+            pass
+    ip = ratelimit.client_ip(request)
+    if ratelimit.ip_banned(ip):
+        raise HTTPException(429, f"This connection was temporarily blocked after repeated "
+                                 f"abuse. Try again in {ratelimit.ban_retry_after(ip) // 60 + 1} min.")
+
+
 def check_quota(cfg: dict, visitor: str, admin_ok: bool) -> dict:
     """Is this visitor allowed to ask another question? Returns a status dict."""
     b = billing_config(cfg)
@@ -364,13 +438,17 @@ def check_quota(cfg: dict, visitor: str, admin_ok: bool) -> dict:
         return {"allowed": True, "sub": active, "reason": ""}
     if active:
         return {"allowed": True, "sub": True, "reason": ""}
+    verify_until, verify_expired = verify_state(visitor)
+    if verify_until:                       # 3-hour window: paid, awaiting owner confirmation
+        return {"allowed": True, "sub": False, "verifying": True,
+                "verify_until": verify_until, "reason": ""}
     totals = usage_totals(b, visitor)
     if totals["prompts"] >= b["free_prompts"] > 0:
         return {"allowed": False, "sub": False, "reason": "prompts",
-                "used": totals, "sub_row": sub}
+                "used": totals, "sub_row": sub, "verify_expired": verify_expired}
     if totals["tokens"] >= b["free_tokens"] > 0:
         return {"allowed": False, "sub": False, "reason": "tokens",
-                "used": totals, "sub_row": sub}
+                "used": totals, "sub_row": sub, "verify_expired": verify_expired}
     return {"allowed": True, "sub": False, "reason": ""}
 
 
@@ -388,6 +466,7 @@ def usage_payload(cfg: dict, visitor: str, admin_ok: bool) -> dict:
     totals = usage_totals(b, visitor)
     sub = sub_for(visitor)
     active = bool(sub and sub["until"] > time.time())
+    verify_until, verify_expired = verify_state(visitor)
     left_p = max(0, b["free_prompts"] - totals["prompts"]) if b["free_prompts"] else None
     left_t = max(0, b["free_tokens"] - totals["tokens"]) if b["free_tokens"] else None
     return {
@@ -411,6 +490,9 @@ def usage_payload(cfg: dict, visitor: str, admin_ok: bool) -> dict:
         "providers": {k: bool(v) for k, v in b["providers"].items()},
         "bank": b["bank"],
         "pay_note": b["pay_note"],
+        "verifying": bool(verify_until),
+        "verify_until": verify_until,
+        "verify_expired": verify_expired,
     }
 
 
@@ -440,14 +522,23 @@ def make_manual_payment(cfg: dict, visitor: str) -> dict:
                                  "them with its reference, then the owner will approve it.")
     ref = f"MA-{visitor[:6].upper()}-{secrets.token_hex(2).upper()}"
     pid = secrets.token_hex(8)
+    verify_until = None
     with _lock, _connect() as con:
         con.execute("INSERT INTO payments(id, visitor_id, provider, amount, currency, status, "
                     "ref, email, created, paid_at, meta) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                     (pid, visitor, "manual", b["price"], b["currency"], "pending", ref, "",
                      time.time(), None, ""))
+        hours = float(b.get("verify_hours") or 0)
+        if hours > 0:
+            ever = con.execute("SELECT COUNT(*) AS n FROM payments WHERE visitor_id=? "
+                               "AND verify_expires IS NOT NULL", (visitor,)).fetchone()["n"]
+            if not ever:      # one verification window per visitor, ever
+                verify_until = time.time() + hours * 3600
+                con.execute("UPDATE payments SET verify_expires=? WHERE id=?",
+                            (verify_until, pid))
     _bg_backup()
     return {"payment_id": pid, "ref": ref, "amount": b["price"], "currency": b["currency"],
-            "bank": b["bank"], "pay_note": b["pay_note"]}
+            "bank": b["bank"], "pay_note": b["pay_note"], "verify_until": verify_until}
 
 
 def redeem_coupon(cfg: dict, visitor: str, code: str) -> dict:
@@ -650,6 +741,8 @@ def admin_stats() -> dict:
         "visitors": visitors, "new_today": new_today,
         "prompts": prompts, "prompts_today": prompts_today, "tokens": tokens,
         "blocked_prompts": blocked, "active_subs": subs,
+        "verifying": sum(1 for p in pending
+                         if p.get("verify_expires") and p["verify_expires"] > time.time()),
         "revenue": [{"currency": r["currency"], "payments": r["n"],
                      "total": round(r["total"] or 0, 2)} for r in paid],
         "pending": pending, "coupons": coupons, "subs": recent,
@@ -689,8 +782,10 @@ async def get_usage(request: Request):
 async def billing_paid(request: Request):
     cfg = _cfg()
     vid = visitor_id(request)
+    ban_gate(request, vid)
     allowed, retry = ratelimit.hit(f"paid:{vid}", 3, 900)
     if not allowed:
+        abuse_event(request, "paid_limit", f"visitor {vid[:12]}")
         raise HTTPException(429, f"You already have payment details - check the paywall card "
                                  f"or try again in {retry // 60 + 1} min.")
     return make_manual_payment(cfg, vid)
@@ -700,8 +795,10 @@ async def billing_paid(request: Request):
 async def billing_coupon(request: Request):
     cfg = _cfg()
     vid = visitor_id(request)
+    ban_gate(request, vid)
     allowed, retry = ratelimit.hit(f"coupon:{vid}", 5, 600)
     if not allowed:
+        abuse_event(request, "coupon_limit", f"visitor {vid[:12]}")
         raise HTTPException(429, f"Too many code attempts - try again in {retry // 60 + 1} min.")
     body = await request.json()
     return redeem_coupon(cfg, vid, str(body.get("code") or ""))
@@ -750,6 +847,25 @@ async def billing_approve(request: Request):
         if not row:
             raise HTTPException(404, "Payment not found.")
     return _activate_from_payment(_cfg(), row["provider"], row["ref"], row["visitor_id"])
+
+
+@router.get("/api/billing/admin/security")
+async def billing_security(request: Request):
+    """Owner-only: what the internal defences have been doing."""
+    _require_admin(request)
+    return {"events": security_events(50),
+            "bans": [{"ip": hash_ip(b["ip"]), "seconds_left": b["seconds_left"]}
+                     for b in ratelimit.bans_snapshot()]}
+
+
+@router.post("/api/billing/admin/security/clear")
+async def billing_security_clear(request: Request):
+    _require_admin(request)
+    with _lock, _connect() as con:
+        con.execute("DELETE FROM security_log")
+    ratelimit.clear_bans()
+    _bg_backup()
+    return {"ok": True}
 
 
 @router.post("/api/billing/admin/reset")

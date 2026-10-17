@@ -912,8 +912,12 @@ async def chat(request: Request):
     admin_ok = admin_ok or billing.is_owner(visitor)
     if not admin_ok:
         # protect the AI key's quota: one visitor may ask 10 questions a minute
+        if ratelimit.ip_banned(ratelimit.client_ip(request)):
+            raise HTTPException(429, "This connection was temporarily blocked after repeated "
+                                     "abuse. Try again later.")
         allowed, retry = ratelimit.hit(f"chat:{visitor}", 10, 60)
         if not allowed:
+            billing.abuse_event(request, "chat_limit", f"visitor {visitor[:12]}")
             raise HTTPException(429, f"Too many questions at once - try again in {retry} s.")
     quota = billing.check_quota(cfg, visitor, admin_ok)
     if not quota["allowed"]:
@@ -960,6 +964,9 @@ def _admin_given(request: Request) -> bool:
         ratelimit.admin_success(ip)
     else:
         ratelimit.admin_fail(ip)
+        billing.log_security_event("admin_fail", ip, "wrong admin password")
+        if ratelimit.admin_blocked(ip):
+            billing.log_security_event("admin_lockout", ip, "10-minute lockout triggered")
     return ok
 
 
