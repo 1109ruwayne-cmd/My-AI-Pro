@@ -50,10 +50,11 @@ sports, weather and more. It answers API-directory questions from those files
 and cites the file names. It also helps with any coding, software/systems
 engineering, maths, science and cybersecurity question, with or without files.
 
-The assistant's **base knowledge is its own source code**: files 01-07 are
+The assistant's **base knowledge is its own source code**: files 01-08 are
 exact, complete duplicates of the running program (backend app.py, billing.py,
-skills.py, connectors.py, knowledge_base.py, the frontend index.html, and the
-Docker/Render infrastructure), regenerated automatically at every boot, so
+skills.py, connectors.py, knowledge_base.py, the frontend index.html, the
+ratelimit.py security module, and the Docker/Render infrastructure),
+regenerated automatically at every boot, so
 what it knows about itself always matches what it actually is. When asked how
 any part of itself works - the paywall, the skills, the model fallback, the
 code runner, the dashboard - it searches these files, explains the real
@@ -121,6 +122,28 @@ hosted services; the site works fully without any of them.
   manually. Stripe and Paystack card payments are built in and activate the
   moment the owner pastes their keys into Settings.
 - The subscription belongs to the browser (visitor id) that paid.
+
+## Security (how it is protected)
+
+- Transport: HTTPS on Render with Strict-Transport-Security; every response
+  carries hardening headers (nosniff, referrer-policy, permissions-policy,
+  frame-ancestors).
+- Rate limiting (module ratelimit.py, file 08): each visitor may ask 10
+  questions per minute; payment-reference requests are limited to 3 per
+  15 minutes with at most 5 unresolved references per visitor; coupon-code
+  guessing is limited to 5 attempts per 10 minutes.
+- Brute-force lockout: 10 wrong admin-password attempts from one IP within
+  10 minutes lock that IP out for 10 minutes - everywhere the password is
+  checked (config, dashboard, payments, usage).
+- Money integrity: the subscription price is read server-side from the
+  owner's config - a visitor can never set or change the amount; every EFT
+  gets a unique reference (MA-XXXX-XXXXXX); subscriptions activate only when
+  the owner approves the payment on the dashboard.
+- Secrets: the admin password and the Gemini API key live only in environment
+  variables on the server; they are never stored in the knowledge base,
+  never sent to the browser, and never revealed in answers.
+- Privacy: visitors are identified by a salted hash of their IP address, not
+  the raw address.
 
 ## The owner
 

@@ -31,6 +31,8 @@ import sqlite3
 import threading
 import time
 import uuid
+
+import ratelimit
 from pathlib import Path
 
 import httpx
@@ -430,6 +432,12 @@ def _new_sub(con: sqlite3.Connection, visitor: str, days: int, plan: str, provid
 
 def make_manual_payment(cfg: dict, visitor: str) -> dict:
     b = billing_config(cfg)
+    with _lock, _connect() as con:
+        pending = con.execute("SELECT COUNT(*) AS n FROM payments WHERE visitor_id=? "
+                              "AND status='pending'", (visitor,)).fetchone()["n"]
+    if pending >= 5:
+        raise HTTPException(409, "You already have 5 payment references waiting. Pay one of "
+                                 "them with its reference, then the owner will approve it.")
     ref = f"MA-{visitor[:6].upper()}-{secrets.token_hex(2).upper()}"
     pid = secrets.token_hex(8)
     with _lock, _connect() as con:
@@ -653,8 +661,15 @@ router = APIRouter()
 
 def _require_admin(request: Request) -> None:
     pw = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not pw:
+        return
+    if _is_admin is not None:
+        # bound to the app's checker: wrong passwords count toward the IP lockout
+        if not _is_admin(request):
+            raise HTTPException(401, "Admin password required")
+        return
     given = request.headers.get("x-admin-password", "")
-    if pw and not hmac.compare_digest(given.encode(), pw.encode()):
+    if not hmac.compare_digest(given.encode(), pw.encode()):
         raise HTTPException(401, "Admin password required")
 
 
@@ -674,6 +689,10 @@ async def get_usage(request: Request):
 async def billing_paid(request: Request):
     cfg = _cfg()
     vid = visitor_id(request)
+    allowed, retry = ratelimit.hit(f"paid:{vid}", 3, 900)
+    if not allowed:
+        raise HTTPException(429, f"You already have payment details - check the paywall card "
+                                 f"or try again in {retry // 60 + 1} min.")
     return make_manual_payment(cfg, vid)
 
 
@@ -681,6 +700,9 @@ async def billing_paid(request: Request):
 async def billing_coupon(request: Request):
     cfg = _cfg()
     vid = visitor_id(request)
+    allowed, retry = ratelimit.hit(f"coupon:{vid}", 5, 600)
+    if not allowed:
+        raise HTTPException(429, f"Too many code attempts - try again in {retry // 60 + 1} min.")
     body = await request.json()
     return redeem_coupon(cfg, vid, str(body.get("code") or ""))
 

@@ -938,6 +938,7 @@ details.adv[open] summary{margin-bottom:14px}
         var p = window.prompt('This AI is protected. Enter the admin password:');
         if (p) { session.set('myai.admin', p); return api(path, opts, true); }
       }
+      if (res.status === 401 && retried) session.set('myai.admin', '');
       return res.json().catch(function () { return null; }).then(function (data) {
         if (!res.ok) throw new Error((data && data.detail) || ('Error ' + res.status));
         return data;

@@ -33,6 +33,7 @@ from openai import OpenAI
 import billing
 import connectors
 import skills
+import ratelimit
 from knowledge_base import SUPPORTED_TYPES, KnowledgeBase
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -91,6 +92,7 @@ SOURCE_SYNC = [
     ("04-source-connectors.md", "connectors.py", "the connector engines"),
     ("05-source-knowledge-base.md", "knowledge_base.py", "the knowledge base engine"),
     ("06-source-frontend-ui.md", "static/index.html", "the complete frontend"),
+    ("08-source-security.md", "ratelimit.py", "the rate limiting and brute-force protection module"),
 ]
 SOURCE_SYNC_INFRA = ("07-source-infrastructure.md",
                      [("Dockerfile", "the Docker image it runs in"),
@@ -273,10 +275,9 @@ def _restore_config_from_turso() -> None:
 
 
 def require_admin(request: Request) -> None:
-    if ADMIN_PASSWORD:
-        given = request.headers.get("x-admin-password", "")
-        if not hmac.compare_digest(given.encode(), ADMIN_PASSWORD.encode()):
-            raise HTTPException(401, "Admin password required")
+    # delegates to _admin_given so wrong passwords count toward the IP lockout
+    if ADMIN_PASSWORD and not _admin_given(request):
+        raise HTTPException(401, "Admin password required")
 
 
 def get_api_key(request: Request, cfg: dict) -> str:
@@ -468,7 +469,7 @@ def build_system_prompt(cfg: dict, ctx: dict) -> str:
         "- Report like a professional: results first, short and structured (headings, "
         "bullets, tables), evidence for claims, no filler and no lectures.",
         "- You know yourself: your identity, business and implementation live in "
-        "00-my-ai-pro-brain.md and your exact source code (files 01-07). Questions about "
+        "00-my-ai-pro-brain.md and your exact source code (files 01-08). Questions about "
         "you, this site, pricing, payments or your own code get answered from those files.",
         "",
         "How to answer:",
@@ -909,6 +910,11 @@ async def chat(request: Request):
     if admin_ok:
         billing.mark_owner(visitor)          # first proof of the password = owner for life
     admin_ok = admin_ok or billing.is_owner(visitor)
+    if not admin_ok:
+        # protect the AI key's quota: one visitor may ask 10 questions a minute
+        allowed, retry = ratelimit.hit(f"chat:{visitor}", 10, 60)
+        if not allowed:
+            raise HTTPException(429, f"Too many questions at once - try again in {retry} s.")
     quota = billing.check_quota(cfg, visitor, admin_ok)
     if not quota["allowed"]:
         await run_in_threadpool(billing.record, cfg, visitor, "paywall", len(asked), 0, True)
@@ -938,11 +944,23 @@ async def chat(request: Request):
 
 
 def _admin_given(request: Request) -> bool:
-    """True when this request proves the owner is at the keyboard."""
+    """True when this request proves the owner is at the keyboard.
+    Wrong passwords are counted per IP; guessing too many locks the IP out."""
     if not ADMIN_PASSWORD:
         return False
     given = request.headers.get("x-admin-password", "")
-    return bool(given) and hmac.compare_digest(given.encode(), ADMIN_PASSWORD.encode())
+    if not given:
+        return False
+    ip = ratelimit.client_ip(request)
+    if ratelimit.admin_blocked(ip):
+        raise HTTPException(429, f"Too many wrong passwords. Try again in "
+                                 f"{ratelimit.admin_retry_after(ip)} s.")
+    ok = hmac.compare_digest(given.encode(), ADMIN_PASSWORD.encode())
+    if ok:
+        ratelimit.admin_success(ip)
+    else:
+        ratelimit.admin_fail(ip)
+    return ok
 
 
 def _metered(gen, cfg: dict, visitor: str, engine: str, chars_in: int):
@@ -1349,6 +1367,21 @@ billing.bind(load_config, _admin_given)
 billing.init_db()
 _restore_config_from_turso()
 app.include_router(billing.router)
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Baseline hardening headers on every response."""
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    # Clickjacking protection that still allows the hosted previews to frame the app.
+    resp.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.e2b.app"
+    resp.headers["Referrer-Policy"] = "same-origin"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=()"
+    resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return resp
+
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
