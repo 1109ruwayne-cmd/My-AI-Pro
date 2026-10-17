@@ -88,6 +88,23 @@ The assistant calls these by itself when helpful; visitors see a small
 The whole module can be switched on/off by the owner in Settings ("Agent
 Skills module").
 
+## I FIX AI module (🛠 repair-specialist mode)
+
+A button in the engine strip switches the assistant into **I FIX AI** mode:
+the AI repair specialist. In this mode it diagnoses and fixes anything
+AI-related that is broken - buggy AI code (OpenAI, Gemini, LangChain,
+chatbots, agents, RAG pipelines), misbehaving prompts, wrong model or config
+choices, hallucinations, refusal loops, truncated answers, token-cost
+problems, deployment and API-key errors - and it also fixes itself (My AI
+Pro) by reading its own source files first. Its method never changes:
+reproduce the symptom, name the root cause in one line, give the minimal
+complete fix, say how to verify it, and list what to watch so it stays
+fixed. Answers carry a 🛠 I FIX AI badge. The owner can switch the module
+on/off in Settings ("I FIX AI module").
+
+The interface never interrupts with browser pop-ups: password prompts and
+confirmations are in-app dialogs that match the design.
+
 ## Chat features
 
 - Streaming answers with Markdown, LaTeX maths ($…$ and $$…$$), KaTeX rendering.

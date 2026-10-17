@@ -428,7 +428,25 @@ def _file_listing(files: list, limit: int = 60) -> str:
     return ", ".join(names[:limit]) + (f" and {len(names) - limit} more" if len(names) > limit else "")
 
 
-def build_system_prompt(cfg: dict, ctx: dict) -> str:
+IFIX_PERSONA = "\n".join([
+    "I FIX AI MODE - you are the AI repair specialist:",
+    "- You fix anything AI-related that is broken: buggy AI code (OpenAI, Gemini, "
+    "LangChain, chatbots, agents, RAG pipelines), prompts that misbehave, wrong model "
+    "or config choices, hallucinations, refusal loops, truncated answers, token-cost "
+    "problems, deployment and API-key errors.",
+    "- Method, every time: (1) reproduce the symptom from what the user shows you, "
+    "(2) name the root cause in one line, (3) give the minimal correct fix as complete "
+    "code or exact settings, (4) say exactly how to verify the fix worked, (5) list what "
+    "to watch so it stays fixed.",
+    "- Never answer 'just rebuild everything' when a targeted fix exists; never hand back "
+    "broken placeholders; if the user's AI is fine and the problem is elsewhere, say so.",
+    "- You also fix YOURSELF: for problems with this site (My AI Pro), search your own "
+    "source files (01-08) first and quote the exact function and change needed.",
+    "",
+])
+
+
+def build_system_prompt(cfg: dict, ctx: dict, ifix: bool = False) -> str:
     """The AI's standing instructions. ctx["mode"] says how it gets to the files:
     "tools" = it searches them itself, "all" = full text below, "search" = keyword-search
     excerpts below, "empty" = no files yet."""
@@ -590,7 +608,10 @@ def build_system_prompt(cfg: dict, ctx: dict) -> str:
             loc = f' location="{location}"' if location else ""
             lines.append(f'<document file="{file.replace(chr(34), chr(39))}"{loc}>\n{text}\n</document>')
         lines.append("</documents>")
-    return "\n".join(lines)
+    text = "\n".join(lines)
+    if ifix:
+        text = text.replace("How to answer:", IFIX_PERSONA + "\nHow to answer:", 1)
+    return text
 
 
 IMAGE_PREFIX = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif|heic|heif);base64,", re.I)
@@ -933,11 +954,13 @@ async def chat(request: Request):
                                           "X-Visitor-Id": visitor})
 
     # Which AI answers? A button in the chat wins; otherwise we pick by what was asked.
+    want_ifix = bool(cfg.get("ifixai", True)) and \
+        str(body.get("engine") or "").strip().lower() == "ifixai"
     engine = connectors.resolve_engine(cfg, str(body.get("engine") or ""), asked)
     if engine != "main":
         generator = stream_other_engine(cfg, engine, request, history, asked[:8000])
     elif key and cfg.get("model") and cfg.get("base_url"):
-        generator = stream_answer(cfg, key, history, query)
+        generator = stream_answer(cfg, key, history, query, ifix=want_ifix)
     else:
         ctx = await run_in_threadpool(kb.build_context, query, int(cfg.get("context_chars", 60000)))
         generator = stream_search_only(cfg, ctx, has_key=bool(key))
@@ -1209,7 +1232,7 @@ def _stream_round(client, kwargs: dict, state: dict):
 
 
 def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dict, state: dict,
-                       searchable: bool = True, ctx: dict = None):
+                       searchable: bool = True, ctx: dict = None, ifix: bool = False):
     """Let the AI decide when to search the files and when to use its Agent Skills.
     Returns {"fallback": bool, "searches": [...]}; fallback=True means this model
     can't use tools, so the caller answers the classic way."""
@@ -1219,7 +1242,7 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
     skills_on = skills.enabled(cfg)
     if ctx is None:
         ctx = {"mode": "tools", "blocks": [], "files": files}
-    messages = [{"role": "system", "content": build_system_prompt(cfg, ctx)}] + to_api_messages(history)
+    messages = [{"role": "system", "content": build_system_prompt(cfg, ctx, ifix)}] + to_api_messages(history)
     tools = ([search_tool(files)] if searchable else []) + (skills.tool_defs() if skills_on else [])
     sources, seen, searches = [], set(), []
     for round_no in range(MAX_TOOL_ROUNDS + 1):
@@ -1294,18 +1317,20 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
     return {"fallback": False, "searches": searches}
 
 
-def _answer_classic(client, cfg: dict, history: list, query: str, extra: dict, state: dict, searches=()):
+def _answer_classic(client, cfg: dict, history: list, query: str, extra: dict, state: dict, searches=(), ifix: bool = False):
     """Put the file text (all of it, or the best keyword matches) straight into the instructions."""
     ctx = kb.build_context(" ".join([query, *searches]), int(cfg.get("context_chars", 60000)))
     yield sse({"type": "sources", "sources": ctx["sources"], "mode": ctx["mode"], "verify": True})
-    messages = [{"role": "system", "content": build_system_prompt(cfg, ctx)}] + to_api_messages(history)
+    messages = [{"role": "system", "content": build_system_prompt(cfg, ctx, ifix)}] + to_api_messages(history)
     _, _, finish = yield from _stream_round(
         client, dict(model=cfg["model"], messages=messages, stream=True, **extra), state)
     if finish == "length":
         state["length"] = True
 
 
-def stream_answer(cfg: dict, key: str, history: list, query: str):
+def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = False):
+    if ifix:
+        yield sse({"type": "engine", "engine": "ifixai", "label": "I FIX AI", "icon": "🛠"})
     base_url, model = cfg["base_url"], cfg["model"]
     state = {"text": False, "gap": False, "length": False, "chain": _model_chain(cfg)}
     extra = {"reasoning_effort": cfg["reasoning_effort"]} if cfg.get("reasoning_effort") else {}
@@ -1330,11 +1355,11 @@ def stream_answer(cfg: dict, key: str, history: list, query: str):
                     yield sse({"type": "sources", "sources": pre_ctx["sources"],
                                "mode": pre_ctx["mode"], "verify": True})
             result = yield from _answer_with_tools(client, cfg, history, files, extra, state,
-                                                   searchable, pre_ctx)
+                                                   searchable, pre_ctx, ifix)
         if result is None or result["fallback"]:
             state["gap"] = state["text"]
             yield from _answer_classic(client, cfg, history, query, extra, state,
-                                       (result or {}).get("searches", ()))
+                                       (result or {}).get("searches", ()), ifix)
         if not state["text"]:
             yield sse({"type": "delta", "text": "_(The AI sent back an empty answer. Try rephrasing, "
                                                 "or choose another model in ⚙️ Settings.)_"})

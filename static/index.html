@@ -442,6 +442,20 @@ details.adv[open] summary{margin-bottom:14px}
   </div>
 </div>
 
+<div class="modal" id="miniModal" hidden>
+  <div class="dialog" style="width:min(430px,100%)" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
+    <header><h2 id="mmTitle"></h2></header>
+    <div class="content" style="gap:12px;padding:16px 22px">
+      <p id="mmText" style="margin:0;color:var(--muted);font-size:14px"></p>
+      <input class="input" id="mmInput" type="password" placeholder="Password" hidden>
+    </div>
+    <footer>
+      <button class="btn small" type="button" id="mmCancel">Cancel</button>
+      <button class="btn small primary" type="button" id="mmOk">OK</button>
+    </footer>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <header>
@@ -545,6 +559,7 @@ details.adv[open] summary{margin-bottom:14px}
         <div class="conn-intro" id="connIntro"></div>
         <div id="connList" style="display:flex;flex-direction:column;gap:9px;margin-top:10px"></div>
         <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgVoice" style="margin-top:4px;accent-color:var(--accent)"><span>Play Open-LLM-VTuber's voice in the chat<small>Switch off if you only want its text answers.</small></span></label>
+        <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgIfix" style="margin-top:4px;accent-color:var(--accent)"><span>I FIX AI module<small>Adds a 🛠 I FIX AI button next to the chat: a repair-specialist mode that diagnoses and fixes broken AI code, prompts, models, configs, agents and RAG pipelines - including this AI itself.</small></span></label>
         <label class="radio" style="margin-top:10px"><input type="checkbox" id="cfgSkills" style="margin-top:4px;accent-color:var(--accent)"><span>Agent Skills module<small>17 built-in tools your AI uses automatically when helpful: calculator, live web search, weather, exchange rates, Wikipedia, dictionary, date &amp; time, timezones, unit converter, finance maths, JSON &amp; regex tools, QR codes, text tools, password audit and a secure random generator.</small></span></label>
         <div class="help">Keys you type here are saved on the server (config.json) and never shown again. You can also put them in the <b>.env</b> file instead. Everything is optional: your AI works fine with none of them.</div>
       </div>
@@ -947,15 +962,20 @@ details.adv[open] summary{margin-bottom:14px}
     var ek = engineKeys();
     if (Object.keys(ek).length) headers['X-Engine-Keys'] = JSON.stringify(ek);
     return fetch(path, Object.assign({}, opts, { headers: headers })).then(function (res) {
+      function finish() {
+        return res.json().catch(function () { return null; }).then(function (data) {
+          if (!res.ok) throw new Error((data && data.detail) || ('Error ' + res.status));
+          return data;
+        });
+      }
       if (res.status === 401 && !retried) {
-        var p = window.prompt('This AI is protected. Enter the admin password:');
-        if (p) { session.set('myai.admin', p); return api(path, opts, true); }
+        return askPassword().then(function (p) {
+          if (p) { session.set('myai.admin', p); return api(path, opts, true); }
+          return finish();
+        });
       }
       if (res.status === 401 && retried) session.set('myai.admin', '');
-      return res.json().catch(function () { return null; }).then(function (data) {
-        if (!res.ok) throw new Error((data && data.detail) || ('Error ' + res.status));
-        return data;
-      });
+      return finish();
     });
   }
 
@@ -1073,6 +1093,33 @@ details.adv[open] summary{margin-bottom:14px}
       (q.pay_note ? '<div class="pw-note">' + esc(q.pay_note) + '</div>' : '') +
       '<div class="pw-status" data-pw="status"></div></div>';
     return h;
+  }
+
+  /* In-app dialog: replaces every browser prompt()/confirm() pop-up. */
+  var mmResolve = null;
+  function miniDialog(opts) {
+    return new Promise(function (res) {
+      mmResolve = res;
+      $('#mmTitle').textContent = opts.title || '';
+      $('#mmText').textContent = opts.text || '';
+      var inp = $('#mmInput');
+      inp.hidden = !opts.password; inp.value = '';
+      $('#mmOk').textContent = opts.okLabel || 'OK';
+      $('#miniModal').hidden = false;
+      if (opts.password) setTimeout(function () { inp.focus(); }, 60);
+    });
+  }
+  function mmDone(val) {
+    $('#miniModal').hidden = true;
+    var r = mmResolve; mmResolve = null;
+    if (r) r(val);
+  }
+  function askPassword() {
+    return miniDialog({ title: 'Admin password', password: true, okLabel: 'Unlock',
+      text: 'This area is protected by the owner. Enter the admin password to continue.' });
+  }
+  function confirmDialog(text, okLabel) {
+    return miniDialog({ title: 'Please confirm', text: text, okLabel: okLabel || 'Yes' });
   }
 
   function bindPaywall(card, q) {
@@ -1307,6 +1354,10 @@ details.adv[open] summary{margin-bottom:14px}
       items.push({ id: id, label: engineLabel(id) + (c.model ? ' · ' + c.model : ''),
                    title: (specs[id] || {}).blurb || '' });
     });
+    if (S.status && S.status.config && S.status.config.ifixai !== false) {
+      items.push({ id: 'ifixai', label: '🛠 I FIX AI',
+                   title: 'AI repair specialist mode: diagnoses and fixes broken AI code, prompts, models, agents - and this AI itself' });
+    }
     var extras = engineOrder().filter(function (id) { return id !== 'main' && !engineReady(id); }).length;
     items.push({ id: '__add', label: '⚙ ' + (extras ? 'Connect more (' + extras + ')' : 'Connectors'),
                  title: 'Open Settings → Connectors' });
@@ -1324,6 +1375,7 @@ details.adv[open] summary{margin-bottom:14px}
         renderEngineStrip();
         toast(id === 'auto' ? 'I’ll pick the best AI for each question.'
           : id === 'main' ? 'I’ll answer everything myself.'
+          : id === 'ifixai' ? '🛠 I FIX AI mode: bring me any broken AI - code, prompt, model or agent - and I’ll diagnose and fix it.'
           : 'Next answers come from ' + ((engineSpecs()[id] || {}).label || id) + '.');
       });
     });
@@ -1626,14 +1678,16 @@ details.adv[open] summary{margin-bottom:14px}
   }
 
   function removeFile(name) {
-    if (!window.confirm('Remove “' + name + '” from your AI\'s knowledge?')) return;
-    api('api/files/' + encodeURIComponent(name), { method: 'DELETE' }).then(function (d) {
-      S.files = d.files || [];
-      renderFiles();
-      if (!S.chat.length) renderThread();
-      toast('Removed ' + name);
-      refreshStatus();
-    }).catch(function (e) { toast(e.message, 'error'); });
+    confirmDialog('Remove “' + name + '” from your AI\'s knowledge?', 'Remove').then(function (yes) {
+      if (!yes) return;
+      api('api/files/' + encodeURIComponent(name), { method: 'DELETE' }).then(function (d) {
+        S.files = d.files || [];
+        renderFiles();
+        if (!S.chat.length) renderThread();
+        toast('Removed ' + name);
+        refreshStatus();
+      }).catch(function (e) { toast(e.message, 'error'); });
+    });
   }
 
   function showUploadRow(text, pct) {
@@ -1669,8 +1723,9 @@ details.adv[open] summary{margin-bottom:14px}
     xhr.onload = function () {
       hideUploadRow();
       if (xhr.status === 401) {
-        var p = window.prompt('This AI is protected. Enter the admin password:');
-        if (p) { session.set('myai.admin', p); upload(files); }
+        askPassword().then(function (p) {
+          if (p) { session.set('myai.admin', p); upload(files); }
+        });
         return;
       }
       var data = {};
@@ -2473,6 +2528,7 @@ details.adv[open] summary{margin-bottom:14px}
     connDraft = {};
     if ($('#cfgVoice')) $('#cfgVoice').checked = c.vtuber_audio !== false;
     if ($('#cfgSkills')) $('#cfgSkills').checked = c.skills_enabled !== false;
+    if ($('#cfgIfix')) $('#cfgIfix').checked = c.ifixai !== false;
     var B = c.billing || {};
     var BP = B.providers || {}, BB = B.bank || {};
     if ($('#billEnabled')) $('#billEnabled').checked = B.enabled !== false;
@@ -2589,6 +2645,7 @@ details.adv[open] summary{margin-bottom:14px}
       engines: collectConns(),
       vtuber_audio: $('#cfgVoice') ? $('#cfgVoice').checked : true,
       skills_enabled: $('#cfgSkills') ? $('#cfgSkills').checked : true,
+      ifixai: $('#cfgIfix') ? $('#cfgIfix').checked : true,
       billing: {
         enabled: $('#billEnabled').checked,
         free_prompts: Number($('#billPrompts').value) || 0,
@@ -2671,6 +2728,15 @@ details.adv[open] summary{margin-bottom:14px}
   $('#pvExpand').addEventListener('click', function () {
     document.querySelector('.preview-dialog').classList.toggle('full');
   });
+  $('#mmOk').addEventListener('click', function () {
+    var inp = $('#mmInput');
+    mmDone(inp.hidden ? true : (inp.value || null));
+  });
+  $('#mmCancel').addEventListener('click', function () { mmDone(null); });
+  $('#mmInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('#mmOk').click(); }
+  });
+  $('#miniModal').addEventListener('mousedown', function (e) { if (e.target === e.currentTarget) mmDone(null); });
   $('#scrim').addEventListener('click', closeSidebar);
   $('#fileInput').addEventListener('change', function (e) { upload(e.target.files); e.target.value = ''; });
 
@@ -2709,7 +2775,7 @@ details.adv[open] summary{margin-bottom:14px}
     downloadText(preview.name.split(/[\\/]/).pop(), preview.code, /\.svg$/i.test(preview.name) ? 'image/svg+xml' : 'text/html');
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closePreview(); closeSettings(); closeSidebar(); }
+    if (e.key === 'Escape') { if (!$('#miniModal').hidden) { mmDone(null); return; } closePreview(); closeSettings(); closeSidebar(); }
   });
 
   // Drag & drop: on the message box = attach to the message; anywhere else = add to knowledge
