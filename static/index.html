@@ -960,7 +960,7 @@ details.adv[open] summary{margin-bottom:14px}
       S.usage = u;
       var pill = $('#usagePill');
       if (!pill) return;
-      if (!u.enabled) { pill.hidden = true; return; }
+      if (!u.enabled && !u.admin) { pill.hidden = true; return; }
       pill.hidden = false;
       if (u.admin) { pill.textContent = u.owner_lifetime ? '\ud83d\udc51 Owner \u00b7 lifetime' : ' Owner'; pill.title = 'Owner account \u2014 activated for life. No limits, no paywall, ever.'; }
       else if (u.subscribed) {
@@ -1002,6 +1002,9 @@ details.adv[open] summary{margin-bottom:14px}
     h += '<div class="pw-row"><input class="input" data-pw="coupon" placeholder="Coupon code">' +
       '<button class="btn small" type="button" data-pw="coupon-go">Redeem</button>' +
       '<button class="btn small" type="button" data-pw="refresh">I\'m subscribed - check again</button></div>' +
+      '<div class="pw-row"><input class="input" data-pw="owner" type="password" ' +
+      'placeholder="Owner? Enter your admin password">' +
+      '<button class="btn small" type="button" data-pw="owner-go">Unlock as owner</button></div>' +
       (q.pay_note ? '<div class="pw-note">' + esc(q.pay_note) + '</div>' : '') +
       '<div class="pw-status" data-pw="status"></div></div>';
     return h;
@@ -1058,6 +1061,20 @@ details.adv[open] summary{margin-bottom:14px}
           refreshUsage().then(function () {
             if (S.usage && S.usage.subscribed) { renderThread(); toast('Subscription active ✓ Welcome back!'); }
             else pwStatus(card, 'No active subscription found yet for this browser.', 'bad');
+          });
+        } else if (kind === 'owner-go') {
+          var pwv = ((card.querySelector('[data-pw="owner"]') || {}).value || '').trim();
+          if (!pwv) { pwStatus(card, 'Type your admin password first.', 'bad'); return; }
+          pwStatus(card, 'Checking…');
+          session.set('myai.admin', pwv);
+          refreshUsage().then(function () {
+            if (S.usage && S.usage.admin) {
+              renderThread();
+              toast('👑 Owner unlocked - activated for life on this device.');
+            } else {
+              session.set('myai.admin', '');
+              pwStatus(card, 'That password was not accepted. Check caps lock and try again.', 'bad');
+            }
           });
         }
       });
@@ -1927,9 +1944,12 @@ details.adv[open] summary{margin-bottom:14px}
       else if (ev.type === 'error') reply.error = ev.message;
     }
 
+    var chatHeaders = { 'Content-Type': 'application/json', 'X-API-Key': getKey(), 'X-Visitor': visitorId() };
+    var ownerPw = session.get('myai.admin');
+    if (ownerPw) chatHeaders['X-Admin-Password'] = ownerPw;
     fetch('api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': getKey(), 'X-Visitor': visitorId() },
+      headers: chatHeaders,
       body: JSON.stringify({ messages: history, engine: engineId === 'auto' ? 'auto' : (engineId || 'auto') }),
       signal: controller ? controller.signal : undefined
     }).then(function (res) {
