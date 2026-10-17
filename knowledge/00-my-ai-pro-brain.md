@@ -27,14 +27,16 @@ sports, weather and more. It answers API-directory questions from those files
 and cites the file names. It also helps with any coding, software/systems
 engineering, maths, science and cybersecurity question, with or without files.
 
-The assistant also carries **its own complete source code** as knowledge
-(files 01-07: backend app.py, billing.py, skills.py, connectors.py,
-knowledge_base.py, the frontend index.html, and the Docker/Render
-infrastructure). When asked how any part of itself works - the paywall, the
-skills, the model fallback, the code runner, the dashboard - it can search
-these files, explain the real implementation and quote the exact functions.
-The source contains no secrets; passwords and API keys live only in
-environment variables on the server.
+The assistant's **base knowledge is its own source code**: files 01-07 are
+exact, complete duplicates of the running program (backend app.py, billing.py,
+skills.py, connectors.py, knowledge_base.py, the frontend index.html, and the
+Docker/Render infrastructure), regenerated automatically at every boot, so
+what it knows about itself always matches what it actually is. When asked how
+any part of itself works - the paywall, the skills, the model fallback, the
+code runner, the dashboard - it searches these files, explains the real
+implementation and quotes the exact functions. The source contains no
+secrets; passwords and API keys live only in environment variables on the
+server.
 
 ## Agent Skills (17 built-in tools it uses automatically)
 

@@ -79,6 +79,62 @@ def _seed_writable() -> None:
 
 
 _seed_writable()
+
+
+# The program's own source code is its base knowledge: on every boot it writes
+# exact, complete duplicates of the running files into the knowledge base, so
+# what it knows about itself can never drift from what it actually is.
+SOURCE_SYNC = [
+    ("01-source-app.md", "app.py", "the main backend"),
+    ("02-source-billing.md", "billing.py", "the billing module"),
+    ("03-source-skills.md", "skills.py", "the Agent Skills module"),
+    ("04-source-connectors.md", "connectors.py", "the connector engines"),
+    ("05-source-knowledge-base.md", "knowledge_base.py", "the knowledge base engine"),
+    ("06-source-frontend-ui.md", "static/index.html", "the complete frontend"),
+]
+SOURCE_SYNC_INFRA = ("07-source-infrastructure.md",
+                     [("Dockerfile", "the Docker image it runs in"),
+                      ("requirements.txt", "its Python dependencies"),
+                      ("render.yaml", "the deploy blueprint"),
+                      ("start.sh", "the startup script")])
+
+
+def _sync_source_to_kb() -> None:
+    try:
+        KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
+        written = 0
+        for out_name, src, desc in SOURCE_SYNC:
+            src_path = BASE_DIR / src
+            if not src_path.exists():
+                continue
+            text = src_path.read_text(encoding="utf-8")
+            body = (f"# This program's own source code: {src}\n\n"
+                    f"Exact, complete duplicate of the running file ({desc}), "
+                    f"regenerated automatically at every boot.\n\n~~~~\n{text}\n~~~~\n")
+            target = KNOWLEDGE_DIR / out_name
+            if not target.exists() or target.read_text(encoding="utf-8") != body:
+                target.write_text(body, encoding="utf-8")
+                written += 1
+        out_name, infra = SOURCE_SYNC_INFRA
+        parts = ["# This program's own source code: infrastructure\n\n"
+                 "Exact, complete duplicates, regenerated automatically at every boot.\n"]
+        for name, desc in infra:
+            src_path = BASE_DIR / name
+            if src_path.exists():
+                parts.append(f"\n## {name}\n\n{desc}\n\n~~~~\n"
+                             f"{src_path.read_text(encoding='utf-8')}\n~~~~\n")
+        body = "".join(parts)
+        target = KNOWLEDGE_DIR / out_name
+        if not target.exists() or target.read_text(encoding="utf-8") != body:
+            target.write_text(body, encoding="utf-8")
+            written += 1
+        print(f"[startup] source code duplicated into knowledge base "
+              f"({written} file(s) updated)", flush=True)
+    except Exception as e:
+        print(f"[startup] source sync failed: {e}", flush=True)
+
+
+_sync_source_to_kb()
 SERVER_API_KEY = os.environ.get("AI_API_KEY", "").strip()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
 MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "50"))

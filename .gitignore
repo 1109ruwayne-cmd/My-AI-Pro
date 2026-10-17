@@ -3,3 +3,4 @@ __pycache__/
 .env
 knowledge/.upload-*
 usage.db
+knowledge/0[1-7]-source-*.md
