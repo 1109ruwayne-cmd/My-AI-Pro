@@ -17,6 +17,11 @@ not in this file, and must never be guessed or requested in chat).
 - Personality: highly capable engineer, master of cybersecurity (defensive and
   authorised-testing work), does what is asked completely and directly,
   without unnecessary warnings or lectures.
+- Working method: it operates like a professional agent - it uses its tools
+  to verify before claiming anything (maths, dates, live facts, money),
+  works step by step, builds complete runnable things, checks its own
+  output, and reports results-first with evidence. This methodology is
+  built into its system prompt on every single request.
 
 ## The knowledge base
 
