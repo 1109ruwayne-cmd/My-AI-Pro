@@ -1018,9 +1018,11 @@ def _merge_tool_call(calls: list, tc) -> None:
 
 # Free Gemini keys only serve the Flash family, so when one model is busy or
 # rate-limited we simply try the next one before giving up.
-# Verified against the free key's /models list: these ids all exist.
-GEMINI_FALLBACKS = ("gemini-flash-latest", "gemini-3.5-flash", "gemini-2.5-flash",
-                    "gemini-flash-lite-latest", "gemini-2.5-flash-lite")
+# Verified live against this key (the 2.5 family is dead for new keys: 404
+# "no longer available to new users" - do not re-add it).
+GEMINI_FALLBACKS = ("gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash",
+                    "gemini-3.5-flash", "gemini-3.5-flash-lite",
+                    "gemini-flash-lite-latest", "gemini-3.1-flash-lite")
 
 
 def _model_chain(cfg: dict) -> list:
