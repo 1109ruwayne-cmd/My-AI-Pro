@@ -1032,48 +1032,74 @@ def _model_chain(cfg: dict) -> list:
     return []
 
 
+MAX_CONTINUATIONS = 3      # auto-continue a truncated answer up to 3 times
+_CONTINUE_MSG = ("Your answer was cut off by the output limit. Continue EXACTLY where you "
+                 "stopped, in the middle of the code block if needed. Do not repeat anything "
+                 "already written, do not restart or re-open code fences, add no commentary - "
+                 "output only the remaining text.")
+
+
 def _stream_round(client, kwargs: dict, state: dict):
     """One request to the AI. Streams its text to the browser; returns (text, tool calls,
-    finish reason). If the model fails before sending anything (busy, rate-limited,
-    missing), it automatically switches to the next fallback model."""
+    finish reason). Two self-healing behaviours:
+    - if the model fails before sending anything (busy, rate-limited, missing), it
+      automatically switches to the next fallback model;
+    - if the answer is truncated by the output limit, it automatically continues where
+      it stopped (up to MAX_CONTINUATIONS times), so long code stays runnable."""
     first = kwargs.get("model")
     chain = [first] + [m for m in (state.get("chain") or []) if m != first]
     emitted, last_exc = False, None
-    for i, model in enumerate(chain):
-        text, calls, finish = [], [], None
-        try:
-            for event in client.chat.completions.create(**dict(kwargs, model=model)):
-                choices = getattr(event, "choices", None)
-                if not choices:
-                    continue
-                choice = choices[0]
-                delta = choice.delta
-                if delta is not None:
-                    piece = getattr(delta, "content", None)
-                    if piece:
-                        emitted = True
-                        if state["gap"]:      # text after a search starts a new paragraph
-                            piece = "\n\n" + piece.lstrip()
-                            state["gap"] = False
-                        state["text"] = True
-                        text.append(piece)
-                        yield sse({"type": "delta", "text": piece})
-                    for tc in getattr(delta, "tool_calls", None) or []:
-                        _merge_tool_call(calls, tc)
-                if choice.finish_reason:
-                    finish = choice.finish_reason
-            state["model"] = model
-            return "".join(text), calls, finish
-        except Exception as exc:
-            last_exc = exc
-            state["last_model"] = model
-            status = getattr(exc, "status_code", None)
-            if emitted or status in (400, 401, 403) or i == len(chain) - 1:
-                raise
-            why = "isn't available" if status == 404 else "is busy"
+    parts, all_calls, cont = [], [], 0
+    while True:
+        done, finish = False, None
+        for i, model in enumerate(chain):
+            text, calls, finish = [], [], None
+            try:
+                for event in client.chat.completions.create(**dict(kwargs, model=model)):
+                    choices = getattr(event, "choices", None)
+                    if not choices:
+                        continue
+                    choice = choices[0]
+                    delta = choice.delta
+                    if delta is not None:
+                        piece = getattr(delta, "content", None)
+                        if piece:
+                            emitted = True
+                            if state["gap"]:      # text after a search starts a new paragraph
+                                piece = "\n\n" + piece.lstrip()
+                                state["gap"] = False
+                            state["text"] = True
+                            text.append(piece)
+                            yield sse({"type": "delta", "text": piece})
+                        for tc in getattr(delta, "tool_calls", None) or []:
+                            _merge_tool_call(calls, tc)
+                    if choice.finish_reason:
+                        finish = choice.finish_reason
+                state["model"] = model
+                parts.append("".join(text))
+                all_calls = all_calls or calls
+                done = True
+                break
+            except Exception as exc:
+                last_exc = exc
+                state["last_model"] = model
+                status = getattr(exc, "status_code", None)
+                if emitted or status in (400, 401, 403) or i == len(chain) - 1:
+                    raise
+                why = "isn't available" if status == 404 else "is busy"
+                yield sse({"type": "status",
+                           "text": f"{model} {why} - switching to {chain[i + 1]}…"})
+        if not done:
+            raise last_exc
+        if finish == "length" and not all_calls and cont < MAX_CONTINUATIONS:
+            cont += 1
             yield sse({"type": "status",
-                       "text": f"{model} {why} - switching to {chain[i + 1]}…"})
-    raise last_exc
+                       "text": f"Long answer - continuing automatically (part {cont + 1})…"})
+            kwargs = dict(kwargs, messages=list(kwargs.get("messages") or []) + [
+                {"role": "assistant", "content": parts[-1]},
+                {"role": "user", "content": _CONTINUE_MSG}])
+            continue
+        return "".join(parts), all_calls, finish
 
 
 def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dict, state: dict,
@@ -1177,6 +1203,10 @@ def stream_answer(cfg: dict, key: str, history: list, query: str):
     base_url, model = cfg["base_url"], cfg["model"]
     state = {"text": False, "gap": False, "length": False, "chain": _model_chain(cfg)}
     extra = {"reasoning_effort": cfg["reasoning_effort"]} if cfg.get("reasoning_effort") else {}
+    if _is_gemini(base_url):
+        # Gemini truncates at a small default; ask for the full budget so big
+        # single-file apps and long code answers come through in one piece.
+        extra.setdefault("max_tokens", int(cfg.get("max_output_tokens") or 65536))
     try:
         client = OpenAI(api_key=key, base_url=base_url, timeout=300, max_retries=1)
         with kb.lock:
