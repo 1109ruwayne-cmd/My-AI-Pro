@@ -91,7 +91,11 @@ Skills module").
 ## Chat features
 
 - Streaming answers with Markdown, LaTeX maths ($…$ and $$…$$), KaTeX rendering.
-- **HTML and SVG code blocks can be previewed** in the chat; **Python and
+- The reading layout is spacious by design: a 1000px reading column with airy
+  line spacing, and a sidebar toggle in the top bar that hides the sidebar
+  for full-width reading (the choice is remembered per browser).
+- **HTML and SVG code blocks can be previewed** in the chat in a compact,
+  resizable window (a ⛶ button switches it to full size); **Python and
   JavaScript code blocks can be run in the browser** (in-browser Python
   includes numpy, pandas, scipy, sympy, matplotlib; no internet, no files).
 - File attachments and pictures (up to 50 MB), voice answers
