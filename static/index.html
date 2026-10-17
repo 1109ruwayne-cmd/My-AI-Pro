@@ -367,6 +367,7 @@ details.adv[open] summary{margin-bottom:14px}
         Settings
       </button>
       <div id="creatorCredit" style="font-size:11px;opacity:.65;text-align:center">created by <b>Ruwayne</b></div>
+      <div id="copyrightLine" style="font-size:10px;opacity:.5;text-align:center">&copy; 2026 Ruwayne Campher &middot; All rights reserved</div>
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -1472,6 +1473,8 @@ details.adv[open] summary{margin-bottom:14px}
       document.title = c.name || 'My AI';
       var cr = $('#creatorCredit');
       if (cr) { cr.textContent = 'created by '; var cb = document.createElement('b'); cb.textContent = c.creator || 'Ruwayne'; cr.appendChild(cb); }
+      var cp = $('#copyrightLine');
+      if (cp) cp.innerHTML = '&copy; ' + new Date().getFullYear() + ' Ruwayne Campher &middot; All rights reserved';
       $('#brandName').textContent = c.name;
       $('#topTitle').textContent = c.name;
       $('#logo').textContent = initials(c.name);

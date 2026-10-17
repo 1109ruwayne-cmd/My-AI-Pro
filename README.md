@@ -1,5 +1,9 @@
 # My AI: coding, engineering, cybersecurity and your files - plus other AIs on call
 
+> **Ownership:** My AI Pro is created and 100% owned by **Ruwayne Campher** -
+> code, memory, brand, data and revenue. Copyright (c) 2026 Ruwayne Campher.
+> All rights reserved. See [LICENSE](LICENSE).
+
 Your own AI assistant. It writes and fixes code in any language, solves engineering problems step by step,
 is a master of cybersecurity, and also knows the files you give it, which it searches by itself whenever a
 question needs them. When you run other AIs - OpenHands, Dify, Open-LLM-VTuber, Ollama with orca-mini, or
