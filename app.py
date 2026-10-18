@@ -736,8 +736,8 @@ the owner configured (Google Gemini) to generate your answers.</p>
 <ul>
 <li>Clearing your browser storage deletes your local chat history and identifier.</li>
 <li>Email-free by design: no account or email is required to use the service.</li>
-<li>Request deletion of server-side usage rows by contacting the owner (see the
-website footer / GitHub repository 1109ruwayne-cmd).</li>
+<li>Request deletion of server-side usage rows by contacting the owner at
+1109ruwayne@gmail.com (or via the GitHub repository 1109ruwayne-cmd).</li>
 </ul>
 <h2>Children</h2>
 <p>The service is not directed at children under 13 and does not knowingly collect
@@ -746,8 +746,8 @@ their data.</p>
 <p>Updates to this policy are posted on this page. Continued use after a change
 accepts it.</p>
 <h2>Contact</h2>
-<p>Ruwayne Campher, South Africa - via the public repository
-github.com/1109ruwayne-cmd/My-AI-Pro (owner contact).</p>
+<p>Ruwayne Campher, South Africa - 1109ruwayne@gmail.com, via the public
+repository github.com/1109ruwayne-cmd/My-AI-Pro (owner contact).</p>
 <p><a href="/">&larr; Back to My AI Pro</a></p>
 </main></body></html>"""
 
