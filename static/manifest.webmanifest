@@ -1,0 +1,18 @@
+{
+  "name": "My AI Pro - Code, Engineering & Cybersecurity AI",
+  "short_name": "My AI Pro",
+  "description": "Subscription AI assistant by Ruwayne Campher: coding, engineering, maths, science and cybersecurity answers, live tools, code runner and previews.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7fb",
+  "theme_color": "#5b5bd6",
+  "categories": ["productivity", "education", "developer tools"],
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

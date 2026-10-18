@@ -26,7 +26,7 @@ from pathlib import Path
 import openai
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 
@@ -696,6 +696,60 @@ def _public_config() -> dict:
     cfg["engines"] = connectors.public_engines(cfg)
     cfg["billing"] = billing.public_billing(cfg)
     return cfg
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_policy():
+    """Public privacy policy - Google Play requires a hosted URL."""
+    return """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy - My AI Pro</title>
+<style>body{font:16px/1.7 system-ui,sans-serif;color:#1c1f33;background:#f6f7fb;margin:0}
+main{max-width:760px;margin:0 auto;padding:40px 22px;background:#fff;min-height:100vh}
+h1{font-size:26px}h2{font-size:18px;margin-top:28px}a{color:#5b5bd6}</style></head>
+<body><main>
+<h1>Privacy Policy - My AI Pro</h1>
+<p>My AI Pro is owned and operated by Ruwayne Campher, South Africa.
+This policy explains what the app and website collect, and what they do not.</p>
+<h2>What we collect</h2>
+<ul>
+<li><b>Usage counters.</b> A random visitor identifier stored in your browser, plus
+counts of questions and rough token usage, so the free allowance and subscriptions
+work. On the server, network addresses are stored only as salted one-way hashes.</li>
+<li><b>Content you send.</b> Questions, attached files and code you paste are processed
+to answer you and are kept in your own chat history on your device.</li>
+<li><b>Payment references.</b> If you pay by EFT, the payment reference and its status
+(pending, approved, rejected) are stored so subscriptions can be verified.</li>
+<li><b>Security logs.</b> Rate-limit and brute-force events (hashed IP, event type, time)
+are kept briefly to protect the service.</li>
+</ul>
+<h2>What we do not collect</h2>
+<ul>
+<li>No advertising identifiers, no trackers, no third-party analytics, no sale of data.</li>
+<li>Passwords and API keys are never stored in logs or knowledge files.</li>
+</ul>
+<h2>Who sees your data</h2>
+<p>Only the owner, Ruwayne Campher, for operating the service (answering quality,
+payment verification, abuse prevention). AI questions are forwarded to the AI provider
+the owner configured (Google Gemini) to generate your answers.</p>
+<h2>Your choices</h2>
+<ul>
+<li>Clearing your browser storage deletes your local chat history and identifier.</li>
+<li>Email-free by design: no account or email is required to use the service.</li>
+<li>Request deletion of server-side usage rows by contacting the owner (see the
+website footer / GitHub repository 1109ruwayne-cmd).</li>
+</ul>
+<h2>Children</h2>
+<p>The service is not directed at children under 13 and does not knowingly collect
+their data.</p>
+<h2>Changes</h2>
+<p>Updates to this policy are posted on this page. Continued use after a change
+accepts it.</p>
+<h2>Contact</h2>
+<p>Ruwayne Campher, South Africa - via the public repository
+github.com/1109ruwayne-cmd/My-AI-Pro (owner contact).</p>
+<p><a href="/">&larr; Back to My AI Pro</a></p>
+</main></body></html>"""
 
 
 @app.get("/api/status")
