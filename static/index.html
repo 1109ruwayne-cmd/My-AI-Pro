@@ -2415,12 +2415,7 @@ details.adv[open] summary{margin-bottom:14px}
   var preview = { doc: '', code: '', name: 'page.html' };
   function previewDoc(code, kind) {
     if (kind === 'svg') {
-      return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;min-height:100%;background:#fff}body{display:grid;place-items:center;min-height:100vh}svg{max-width:100%;height:auto}</style></head><body>' + code + '<script>
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('static/sw.js').catch(function () {}); });
-  }
-</script>
-</body></html>';
+      return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;min-height:100%;background:#fff}body{display:grid;place-items:center;min-height:100vh}svg{max-width:100%;height:auto}</style></head><body>' + code + '</body></html>';
     }
     var m = code.match(/<head[^>]*>/i) || code.match(/<html[^>]*>/i) || code.match(/<!doctype[^>]*>/i);
     if (m) { var at = m.index + m[0].length; return code.slice(0, at) + STORAGE_SHIM + code.slice(at); }
@@ -2830,6 +2825,11 @@ details.adv[open] summary{margin-bottom:14px}
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();
+</script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('static/sw.js').catch(function () {}); });
+  }
 </script>
 </body>
 </html>
