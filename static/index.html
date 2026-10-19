@@ -1207,7 +1207,12 @@ details.adv[open] summary{margin-bottom:14px}
     box.hidden = false;
     box.innerHTML = '<div class="help">Loading…</div>';
     api('api/billing/admin').then(function (d) {
-      var h = '<div class="dash-stats">' +
+      var opw = session.get('myai.admin');
+      var h = '<div class="lbl">🔑 Owner password - yours alone, keep it private</div>' +
+        '<div class="row"><input class="input" id="dashPw" type="text" readonly value="' + esc(opw) + '" style="max-width:340px" title="Your owner password">' +
+        '<button class="btn small" type="button" id="dashPwCopy">Copy</button>' +
+        '<span class="help">Only shown while you are signed in as owner.</span></div>' +
+        '<div class="dash-stats">' +
         '<span class="dstat"><b>' + d.visitors + '</b> visitors (' + d.new_today + ' new today)</span>' +
         '<span class="dstat"><b>' + d.prompts + '</b> questions (' + d.prompts_today + ' today)</span>' +
         '<span class="dstat"><b>' + Math.round((d.tokens || 0) / 1000) + 'k</b> tokens</span>' +
@@ -1248,6 +1253,13 @@ details.adv[open] summary{margin-bottom:14px}
         '<input class="input" id="grDays" type="number" value="30" min="1" style="max-width:90px">' +
         '<button class="btn small" type="button" id="grGo">Grant days</button></div>';
       box.innerHTML = h;
+      var pwCopy = box.querySelector('#dashPwCopy');
+      if (pwCopy) pwCopy.addEventListener('click', function () {
+        var f = box.querySelector('#dashPw');
+        try { f.select(); f.setSelectionRange(0, 999); } catch (e) { /* ignore */ }
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(f.value);
+        toast('Owner password copied.');
+      });
       each(box.querySelectorAll('[data-appr]'), function (b) {
         b.addEventListener('click', function () {
           api('api/billing/admin/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' },

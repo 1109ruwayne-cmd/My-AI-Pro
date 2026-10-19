@@ -752,6 +752,84 @@ repository github.com/1109ruwayne-cmd/My-AI-Pro (owner contact).</p>
 </main></body></html>"""
 
 
+def _owner_code(window: int) -> str:
+    """One-click owner sign-in codes: signed with the owner password, hour-windowed."""
+    return hmac.new(ADMIN_PASSWORD.encode(), f"owner-activate:{window}".encode(),
+                    "sha256").hexdigest()[:20]
+
+
+@app.get("/api/owner-link")
+def owner_link(request: Request):
+    """Hand the owner a single-click sign-in URL for any browser they own."""
+    require_admin(request)
+    code = _owner_code(int(time.time() // 3600))
+    left = 120 - int((time.time() % 3600) // 60)          # this hour + the previous one
+    return {"url": f"/owner-activate?code={code}", "valid_for_minutes": left}
+
+
+@app.post("/api/owner-activate")
+async def owner_activate(request: Request):
+    """Redeem a sign-in link: marks this browser's visitor as owner for life and
+    returns the password so the browser can keep it, exactly as if typed."""
+    if not ADMIN_PASSWORD:
+        raise HTTPException(403, "Owner sign-in is not configured on this server.")
+    try:
+        code = str((await request.json()).get("code", ""))
+    except ValueError:
+        raise HTTPException(400, "Invalid request.")
+    win = int(time.time() // 3600)
+    ok = bool(code) and (hmac.compare_digest(code, _owner_code(win))
+                         or hmac.compare_digest(code, _owner_code(win - 1)))
+    if not ok:
+        raise HTTPException(403, "This sign-in link is no longer valid - ask for a fresh one.")
+    billing.mark_owner(billing.visitor_id(request))
+    return {"ok": True, "password": ADMIN_PASSWORD}
+
+
+@app.get("/owner-activate", response_class=HTMLResponse)
+def owner_activate_page():
+    """Tiny page that signs a browser in as owner: redeems the link, stores the
+    password in that browser's session and walks it home to the 👑 pill."""
+    return """<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Owner sign-in - My AI Pro</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eef0f7;
+font:16px/1.6 system-ui,sans-serif;color:#1c2033}main{max-width:520px;margin:24px;
+background:#fff;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(20,24,60,.12)}
+h1{font-size:20px;margin:0 0 10px}p{margin:0;color:#444b66}</style></head>
+<body><main><h1>👑 Owner sign-in</h1><p id="msg">Signing this browser in…</p></main>
+<script>
+(function () {
+  function vid() {
+    try {
+      var v = JSON.parse(localStorage.getItem('myai.visitor') || 'null');
+      if (v) return v;
+      v = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : 'v-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('myai.visitor', JSON.stringify(v));
+      return v;
+    } catch (e) { return 'v-' + Date.now(); }
+  }
+  var code = (location.search.match(/code=([^&]+)/) || [])[1] || '';
+  var out = document.getElementById('msg');
+  fetch('api/owner-activate', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Visitor': vid() },
+    body: JSON.stringify({ code: code }) })
+    .then(function (r) { if (!r.ok) throw new Error('bad link'); return r.json(); })
+    .then(function (d) {
+      sessionStorage.setItem('myai.admin', d.password);
+      out.textContent = 'Signed in as owner. Your password is saved in this browser ' +
+        'and your lifetime free access is active - taking you home…';
+      setTimeout(function () { location.replace('/'); }, 1400);
+    })
+    .catch(function () {
+      out.textContent = 'This sign-in link is no longer valid. Ask for a fresh one, ' +
+        'or type your owner password into the “Unlock as owner” box on the paywall.';
+    });
+})();
+</script></body></html>"""
+
+
 @app.get("/api/status")
 def status():
     kb.refresh()
