@@ -983,6 +983,37 @@ Official status of any licence is only what eNaTIS states.</div>
         _run("DELETE FROM traffic WHERE id=?", (tid,), force_backup=True)
         return {"ok": True}
 
+    @app.post("/api/reg/sendmail")
+    async def reg_sendmail(request: Request):
+        """Owner-gated outbound e-mail through the configured SMTP account, logged in submissions."""
+        require_admin(request)
+        d = await request.json()
+        to = str(d.get("to") or "").strip()
+        subject = str(d.get("subject") or "").strip()
+        body = str(d.get("body") or "")
+        if not (to and subject):
+            raise HTTPException(400, "to and subject required.")
+        host, port = get_kv("smtp_host"), int(get_kv("smtp_port") or "587")
+        user, pw = get_kv("smtp_user"), get_kv("smtp_pass")
+        frm = get_kv("smtp_from") or user
+        try:
+            if not (host and user and pw):
+                raise RuntimeError("SMTP not configured in the Submission tab yet.")
+            msg = MIMEText(body, "plain")
+            msg["Subject"], msg["From"], msg["To"] = subject, frm, to
+            with smtplib.SMTP(host, port, timeout=60) as s:
+                s.starttls()
+                s.login(user, pw)
+                s.sendmail(frm, [to], msg.as_string())
+            status, log = "sent", f"sent via {host} to {to}"
+        except Exception as e:
+            status, log = "failed", repr(e)[:2000]
+        _run("INSERT INTO submissions(item_id,channel,target,status,log,created,sent_at)"
+             " VALUES (0,'smtp',?,?,?,?,?,?)",
+             (f"{to} | {subject}", status, log, time.time(),
+              time.time() if status == "sent" else 0), force_backup=True)
+        return {"ok": status == "sent", "status": status, "log": log}
+
     @app.get("/annexure5/{iid}", response_class=HTMLResponse)
     def annexure5_page(request: Request, iid: int):
         require_admin(request)
