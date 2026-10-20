@@ -437,6 +437,9 @@ details.adv[open] summary{margin-bottom:14px}
     <div class="file-list" id="fileList"></div>
     <div class="sidebar-footer">
       <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Loading…</span></div>
+      <button class="btn" id="ownerBtn" type="button" title="Owner access - unlock with your password, or open your owner dashboard">
+        <span aria-hidden="true">👑</span> <span id="ownerBtnLabel">Owner access</span>
+      </button>
       <button class="btn" id="settingsBtn" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>
         Settings
@@ -1078,6 +1081,7 @@ details.adv[open] summary{margin-bottom:14px}
   function refreshUsage() {
     return api('api/usage').then(function (u) {
       S.usage = u;
+      syncOwnerBtn();
       var pill = $('#usagePill');
       if (!pill) return;
       if (!u.enabled && !u.admin) { pill.hidden = true; return; }
@@ -1202,6 +1206,44 @@ details.adv[open] summary{margin-bottom:14px}
   function askPassword() {
     return miniDialog({ title: 'Admin password', password: true, okLabel: 'Unlock',
       text: 'This area is protected by the owner. Enter the admin password to continue.' });
+  }
+  /* Always-visible owner entry point in the sidebar: unlocks with the password
+     when this browser is not the owner yet, otherwise opens the owner dashboard. */
+  function syncOwnerBtn() {
+    var l = $('#ownerBtnLabel'), b = $('#ownerBtn');
+    if (!l || !b) return;
+    var u = S.usage;
+    if (u && u.admin) {
+      l.textContent = u.owner_lifetime ? 'Owner · lifetime' : 'Owner';
+      b.title = 'You are the owner on this device - open your owner dashboard';
+    } else {
+      l.textContent = 'Owner access';
+      b.title = 'Owner access - unlock with your password, or open your owner dashboard';
+    }
+  }
+  function ownerAccess() {
+    if (S.usage && S.usage.admin) {
+      openSettings();
+      toast('👑 Owner dashboard - your password label is at the top.');
+      setTimeout(function () { var d = $('#billDashBtn'); if (d) d.click(); }, 350);
+      return;
+    }
+    miniDialog({ title: '👑 Unlock as owner', password: true, okLabel: 'Unlock as owner',
+      text: 'Enter your owner password to activate lifetime free access on this device.' })
+      .then(function (pw) {
+        pw = (pw === null || pw === undefined) ? '' : String(pw).trim();
+        if (!pw) return;
+        session.set('myai.admin', pw);
+        refreshUsage().then(function () {
+          if (S.usage && S.usage.admin) {
+            renderThread();
+            toast('👑 Owner unlocked - activated for life on this device.');
+          } else {
+            session.set('myai.admin', '');
+            toast('That password was not accepted. Check caps lock and try again.', 'error');
+          }
+        });
+      });
   }
   function confirmDialog(text, okLabel) {
     return miniDialog({ title: 'Please confirm', text: text, okLabel: okLabel || 'Yes' });
@@ -2825,6 +2867,7 @@ details.adv[open] summary{margin-bottom:14px}
     themeIcons();
   });
   themeIcons();
+  $('#ownerBtn').addEventListener('click', ownerAccess);
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sideBtn').addEventListener('click', function () {
     var on = document.querySelector('.app').classList.toggle('sideless');
