@@ -1759,6 +1759,7 @@ details.adv[open] summary{margin-bottom:14px}
 
   /* ----------------------------------------------------------------- status */
   function setStatus(kind, text) { $('#statusDot').className = 'dot ' + kind; $('#statusText').textContent = text; }
+  var statusRetry = null;
 
   function refreshStatus() {
     return api('api/status').then(function (st) {
@@ -1776,7 +1777,10 @@ details.adv[open] summary{margin-bottom:14px}
       $('#modelPill').textContent = ok ? c.model : 'Search-only mode';
       $('#keyBanner').hidden = ok;
       refreshEngines();
-    }).catch(function () { setStatus('warn', 'Server not reachable'); });
+    }).catch(function () {
+      setStatus('warn', 'Server not reachable - retrying…');
+      if (!statusRetry) statusRetry = setTimeout(function () { statusRetry = null; refreshStatus(); }, 5000);
+    });
   }
 
   /* ------------------------------------------------------------------ files */
@@ -2967,7 +2971,7 @@ details.adv[open] summary{margin-bottom:14px}
       if (window.innerWidth > 860) $('#input').focus();
     });
     // Pick up files that were copied straight into the knowledge folder.
-    setInterval(function () { if (!document.hidden && !S.streaming) refreshFiles(); }, 15000);
+    setInterval(function () { if (!document.hidden && !S.streaming) { refreshFiles(); refreshStatus(); } }, 15000);
   }
   // Wait for the maths and code-colouring scripts (they load with "defer").
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
