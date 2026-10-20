@@ -1008,7 +1008,7 @@ Official status of any licence is only what eNaTIS states.</div>
         except Exception as e:
             status, log = "failed", repr(e)[:2000]
         _run("INSERT INTO submissions(item_id,channel,target,status,log,created,sent_at)"
-             " VALUES (0,'smtp',?,?,?,?,?,?)",
+             " VALUES (0,'smtp',?,?,?,?,?)",
              (f"{to} | {subject}", status, log, time.time(),
               time.time() if status == "sent" else 0), force_backup=True)
         return {"ok": status == "sent", "status": status, "log": log}
