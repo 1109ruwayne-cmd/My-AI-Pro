@@ -68,6 +68,7 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
       <button class="tab" data-tab="orders" type="button">🧾 Orders</button>
       <button class="tab" data-tab="submit" type="button">📨 Submission</button>
       <button class="tab" data-tab="services" type="button">💼 Services</button>
+      <button class="tab" data-tab="traffic" type="button">🚗 Traffic</button>
     </div>
 
     <section id="tab-vault">
@@ -160,6 +161,53 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
       </div>
       <div class="card"><div id="svcList"></div></div>
     </section>
+    <section id="tab-traffic" hidden>
+      <div class="card">
+        <b>🚗 Traffic department - learner's &amp; driving licence registration (NaTIS / RTMC)</b>
+        <div class="help" style="margin:6px 0 10px">Pre-filled official forms LL1 / DL1 from your owner profile, plus the booking
+        channels, test-day checklist and current indicative fees. Online pre-booking: register at
+        <a href="https://online.natis.gov.za" target="_blank">online.natis.gov.za</a> with your SA ID, e-mail and cellphone (OTP-verified);
+        Western Cape DLTCs also accept walk-in bookings.</div>
+        <div class="grid">
+          <div><label class="lbl">Vehicle code</label><select id="trCode">
+            <option>A - motorcycle</option><option>A1 - light motorcycle</option>
+            <option selected>B - light motor vehicle</option><option>C1 - light goods vehicle</option>
+            <option>C - heavy goods vehicle</option><option>EC1 - articulated light</option><option>EC - articulated heavy</option>
+          </select></div>
+          <div><label class="lbl">Learner's licence no. (for DL1)</label><input id="trLl" placeholder="e.g. 123456789"></div>
+          <div><label class="lbl">Learner's obtained on</label><input id="trLlDate" type="date"></div>
+        </div>
+        <p style="margin:10px 0 0">
+          <button class="btn pri" id="trLL1" type="button">📄 LL1 - learner's licence application (pre-filled)</button>
+          <button class="btn pri" id="trDL1" type="button">📄 DL1 - driving licence application (pre-filled)</button>
+        </p>
+      </div>
+      <div class="card">
+        <b>Test-day checklist &amp; indicative 2026 fees</b>
+        <div class="grid" style="margin-top:8px">
+          <div>
+            <div class="help"><b>Learner's (LL1):</b> original SA ID (17+), eye test &lt;3 months (free at DLTC), 3 B&amp;W ID photos,
+            booking ref, fee. <b>Driving (DL1):</b> ID, valid learner's, 4 B&amp;W photos, eye test, booking ref, fee.</div>
+          </div>
+          <div>
+            <table><tr><th>Item</th><th>Fee</th></tr>
+            <tr><td>Learner's test booking</td><td>R108</td></tr>
+            <tr><td>Learner's card issue (on pass)</td><td>R252</td></tr>
+            <tr><td>Driving test booking</td><td>R250</td></tr>
+            <tr><td>Driving licence card issue</td><td>R250</td></tr>
+            <tr><td>Temporary licence</td><td>R60-R150</td></tr>
+            <tr><td>Optometrist eye test (private)</td><td>R150-R350</td></tr></table>
+            <div class="meta">Confirm exact amounts at your DLTC - provinces add admin charges.</div>
+          </div>
+        </div>
+        <div class="help" style="margin-top:10px">Official channels:
+          <a href="https://online.natis.gov.za" target="_blank">online.natis.gov.za (bookings)</a> ·
+          <a href="https://www.natis.gov.za" target="_blank">natis.gov.za</a> ·
+          <a href="https://www.rtmc.co.za" target="_blank">rtmc.co.za</a> ·
+          <a href="https://www.gov.za/services/driving-licence/apply-learners-licence" target="_blank">gov.za learner's guide</a>
+        </div>
+      </div>
+    </section>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -197,7 +245,7 @@ document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click', function(){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
-    ['vault','certs','orders','submit','services'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
+    ['vault','certs','orders','submit','services','traffic'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
   });
 });
 
@@ -351,6 +399,14 @@ function renderSubs(){
     });
   });
 }
+
+/* traffic (NaTIS) */
+function trCodeVal(){ var v = $('#trCode').value || 'B'; return v.split(' ')[0]; }
+$('#trLL1').addEventListener('click', function(){
+  window.open('/traffic/ll1?code=' + encodeURIComponent(trCodeVal()), '_blank'); });
+$('#trDL1').addEventListener('click', function(){
+  window.open('/traffic/dl1?code=' + encodeURIComponent(trCodeVal()) +
+    '&ll=' + encodeURIComponent($('#trLl').value) + '&lldate=' + encodeURIComponent($('#trLlDate').value), '_blank'); });
 
 /* certs */
 $('#cIssue').addEventListener('click', function(){
