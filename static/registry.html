@@ -465,7 +465,8 @@ function renderTraffic(){
   $('#trLic').innerHTML = lic.length ? '<table><tr><th>Licence</th><th>Number</th><th>Issued</th><th>Renewal</th><th></th></tr>' +
     lic.map(function(r){ return '<tr><td>' + esc(r.descr) + '</td><td><code>' + esc(r.ref) + '</code></td><td>' + (r.paid_on || '-') +
       '</td><td' + (soon(r.expires_on) ? ' style="color:#c0392b;font-weight:700"' : '') + '>' + (r.expires_on || '-') + '</td>' +
-      '<td class="row"><button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
+      '<td class="row"><a class="btn sm" target="_blank" href="/traffic/lcard/' + r.id + '">Card</a>' +
+      '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
     : '<div class="help">No licences recorded yet - record them here once the DLTC issues them.</div>';
   var veh = TR.rows.filter(function(r){ return r.kind === 'vehicle'; });
   $('#trVeh').innerHTML = veh.length ? '<table><tr><th>Reg</th><th>Vehicle</th><th>VIN</th><th>Tare</th><th>Disc expires</th><th></th></tr>' +

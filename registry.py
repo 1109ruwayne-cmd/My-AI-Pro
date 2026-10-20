@@ -896,6 +896,50 @@ unauthenticated by design so that any institution's systems can call them direct
         return HTMLResponse(_vehicle_form(request, "ARC", {"reg": reg, "vin": vin, "make": make,
                                                            "model": model, "year": year, "tare": tare}))
 
+    @app.get("/traffic/lcard/{tid}", response_class=HTMLResponse)
+    def traffic_lcard(request: Request, tid: int):
+        r = _rows("SELECT * FROM traffic WHERE id=? AND kind='licence'", (tid,))
+        if not r:
+            raise HTTPException(404, "Licence record not found.")
+        c = r[0]
+        today = time.strftime("%Y-%m-%d")
+        expired = bool(c["expires_on"]) and c["expires_on"] < today
+        status = "EXPIRED" if expired else ("VALID" if c["expires_on"] else "NO EXPIRY ON RECORD")
+        col = "#c0392b" if expired else "#1e8e3e"
+        return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Licence record {c['ref'] or c['id']}</title>
+<style>@page{{size:A4 landscape;margin:14mm}}body{{margin:0;background:#eef0f7;font-family:system-ui,sans-serif;color:#1c2033}}
+.sheet{{position:relative;max-width:860px;margin:24px auto;background:#fff;border:3px solid #5b5bd6;padding:40px 48px;overflow:hidden}}
+.wm{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+font:800 64px/1 system-ui;color:rgba(192,57,43,.10);transform:rotate(-24deg);text-align:center;letter-spacing:.06em}}
+.head{{font:800 15px/1.4 system-ui;letter-spacing:.14em;text-transform:uppercase;color:#5b5bd6}}
+.sub{{font:12px/1.5 system-ui;color:#64698a;margin:2px 0 20px}}
+.grid2{{display:flex;gap:16px;flex-wrap:wrap}} .box{{flex:1;min-width:220px;border:1px solid #9aa0c0;padding:10px 14px}}
+label{{display:block;font:10px/1.3 system-ui;text-transform:uppercase;letter-spacing:.06em;color:#64698a}}
+.val{{font:15px/1.4 system-ui;margin-top:3px}} .status{{font:800 20px system-ui;color:{col}}}
+.note{{font:11px/1.6 system-ui;color:#3c4160;border-top:1px solid #c9cde4;margin-top:22px;padding-top:12px}}
+button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
+@media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0}}}}</style></head>
+<body><button onclick="window.print()">Print / save PDF</button>
+<div class="sheet"><div class="wm">UNOFFICIAL RECORD<br>NOT A LICENCE</div>
+<div class="head">My AI Pro Registry &middot; Personal Licence Record</div>
+<div class="sub">Private register of Ruwayne Campher &middot; record printed {today} &middot; this card is NOT a learner's or driving
+licence and confers no right to drive on any road.</div>
+<div class="grid2">
+<div class="box"><label>Licence type &amp; code</label><div class="val">{c['descr']}</div></div>
+<div class="box"><label>Licence number</label><div class="val">{c['ref'] or 'not recorded'}</div></div>
+<div class="box"><label>Issued</label><div class="val">{c['paid_on'] or '-'}</div></div>
+<div class="box"><label>Expiry / renewal</label><div class="val">{c['expires_on'] or '-'}</div></div>
+<div class="box"><label>Status on this record</label><div class="status">{status}</div></div>
+<div class="box"><label>Fingerprints / biometrics</label><div class="val">Captured physically at the testing centre on the
+official document only - no digital copy exists or is valid.</div></div>
+</div>
+<div class="note"><b>Expired?</b> A learner's licence cannot be extended or re-dated by anyone: book a fresh test
+(LL1 form, R108) at your DLTC or via online.natis.gov.za - the DLTC then issues a new official temporary licence.
+<b>Need certified proof of history?</b> Request a NaTIS driving-licence record extract from the RTMC / your DLTC.
+Official status of any licence is only what eNaTIS states.</div>
+</div></body></html>""")
+
     @app.get("/api/reg/traffic")
     def traffic_list(request: Request):
         require_admin(request)
