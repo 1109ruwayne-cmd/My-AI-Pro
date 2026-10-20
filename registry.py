@@ -984,10 +984,9 @@ Official status of any licence is only what eNaTIS states.</div>
         return {"ok": True}
 
     @app.post("/api/reg/sendmail")
-    async def reg_sendmail(request: Request):
+    def reg_sendmail(request: Request, d: dict):
         """Owner-gated outbound e-mail through the configured SMTP account, logged in submissions."""
         require_admin(request)
-        d = await request.json()
         to = str(d.get("to") or "").strip()
         subject = str(d.get("subject") or "").strip()
         body = str(d.get("body") or "")
@@ -1001,7 +1000,7 @@ Official status of any licence is only what eNaTIS states.</div>
                 raise RuntimeError("SMTP not configured in the Submission tab yet.")
             msg = MIMEText(body, "plain")
             msg["Subject"], msg["From"], msg["To"] = subject, frm, to
-            with smtplib.SMTP(host, port, timeout=60) as s:
+            with smtplib.SMTP(host, port, timeout=25) as s:
                 s.starttls()
                 s.login(user, pw)
                 s.sendmail(frm, [to], msg.as_string())
