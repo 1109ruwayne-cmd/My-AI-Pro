@@ -1473,7 +1473,11 @@ def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = F
         # Gemini truncates at a small default; ask for the full budget so big
         # single-file apps and long code answers come through in one piece.
         extra.setdefault("max_tokens", int(cfg.get("max_output_tokens") or 65536))
-    try:
+    elif "openrouter.ai" in base_url:
+        # OpenRouter free credits cap the affordable max_tokens per request;
+        # stay far below the ceiling so free-tier calls never 402 on size.
+        extra.setdefault("max_tokens", min(int(cfg.get("max_output_tokens") or 8192), 8192))
+    def _core():
         client = OpenAI(api_key=key, base_url=base_url, timeout=300, max_retries=1)
         with kb.lock:
             files = [(f.name, "" if f.chunks else "no readable text") for f in kb.files.values()]
@@ -1500,9 +1504,21 @@ def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = F
                                                 "or choose another model in ⚙️ Settings.)_"})
         if state["length"]:
             yield sse({"type": "notice", "kind": "length"})
+    try:
+        yield from _core()
     except Exception as exc:
-        yield sse({"type": "error",
-                   "message": friendly_error(exc, base_url, state.get("last_model") or model)})
+        retried = False
+        if "openrouter.ai" in base_url and not state["text"] and \
+                ("402" in str(exc) or "afford" in str(exc) or "credits" in str(exc)):
+            extra["max_tokens"] = 2048
+            try:
+                yield from _core()
+                retried = True
+            except Exception as exc2:
+                exc = exc2
+        if not retried:
+            yield sse({"type": "error",
+                       "message": friendly_error(exc, base_url, state.get("last_model") or model)})
     yield sse({"type": "done"})
 
 
