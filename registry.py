@@ -13,10 +13,14 @@ import io
 import os
 import re
 import secrets
+import smtplib
 import sqlite3
 import threading
 import time
 import zipfile
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 
 import httpx
@@ -48,6 +52,10 @@ CREATE TABLE IF NOT EXISTS orders(
   service TEXT, amount REAL, status TEXT, created REAL, verify_until REAL);
 CREATE TABLE IF NOT EXISTS services(
   id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, price REAL, descr TEXT, active INTEGER DEFAULT 1);
+CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS submissions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, channel TEXT, target TEXT,
+  status TEXT, log TEXT, created REAL, sent_at REAL);
 """
 
 # ---------------------------------------------------------------- statutory checklists
@@ -213,6 +221,131 @@ def _new_ref(prefix: str) -> str:
     return f"{prefix}-{secrets.token_hex(2).upper()}-{int(time.time()) % 10000:04d}"
 
 
+def get_kv(key: str, default: str = "") -> str:
+    r = _rows("SELECT value FROM kv WHERE key=?", (key,))
+    return r[0]["value"] if r else default
+
+
+def set_kv(key: str, value: str) -> None:
+    with _lock, _connect() as con:
+        con.execute("INSERT INTO kv(key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (key, value))
+        con.commit()
+    threading.Thread(target=backup_now, kwargs={"force": True}, daemon=True).start()
+
+
+SETTING_KEYS = ("owner_name", "owner_id", "owner_address", "owner_phone", "owner_email",
+                "doel_email", "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_from",
+                "signature")
+
+
+def settings_masked() -> dict:
+    out = {k: get_kv(k) for k in SETTING_KEYS}
+    out["smtp_pass"] = "••••••••" if get_kv("smtp_pass") else ""
+    out["signature_set"] = bool(get_kv("signature"))
+    return out
+
+
+def build_pack_bytes(item: dict, docs: list) -> bytes:
+    chk = CHECKLISTS.get(item["kind"], CHECKLISTS["certification"])
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        lines = [f"# {chk['label']} - application checklist", f"Authority: {chk['authority']}", ""]
+        lines += [f"- [ ] {s}" for s in chk["steps"]]
+        lines += ["", "Notes:", chk["notes"], ""]
+        z.writestr("CHECKLIST.md", "\n".join(lines))
+        summ = [f"Item: {item['title']}", f"Kind: {item['kind']}", f"Authority: {item['authority']}",
+                f"Reference/number: {item['number'] or '-'}", f"Issued: {item['issued_on'] or '-'}",
+                f"Expires: {item['expires_on'] or '-'}", f"Status: {item['status']}", "",
+                f"Applicant: {get_kv('owner_name') or 'Ruwayne Campher'}",
+                f"ID number: {get_kv('owner_id') or '-'}",
+                f"Address: {get_kv('owner_address') or '-'}",
+                f"Phone: {get_kv('owner_phone') or '-'}  Email: {get_kv('owner_email') or '-'}", "",
+                f"Packed {time.strftime('%Y-%m-%d %H:%M')} - My AI Pro Registry"]
+        z.writestr("SUMMARY.txt", "\n".join(summ))
+        z.writestr("COVER-LETTER.txt", cover_letter(item))
+        z.writestr("ANNEXURE-5- PREFILLED.txt", annexure5_text(item))
+        for d in docs:
+            safe = re.sub(r"[^A-Za-z0-9._-]", "_", d["name"]) or "document"
+            z.writestr(f"documents/{safe}", d["data"])
+    return buf.getvalue()
+
+
+def cover_letter(item: dict) -> str:
+    chk = CHECKLISTS.get(item["kind"], CHECKLISTS["certification"])
+    return f"""{time.strftime('%d %B %Y')}
+
+The Chief Inspector - Occupational Health and Safety
+Department of Employment and Labour
+{get_kv('doel_email') or '(provincial office address)'}
+
+Dear Sir / Madam,
+
+APPLICATION: {item['title']} ({chk['label']})
+Reference on file: {item['number'] or 'new application'}
+
+I, {get_kv('owner_name') or 'Ruwayne Campher'} (ID {get_kv('owner_id') or '-'}), hereby submit the
+attached complete application pack for the above matter, comprising:
+
+{chr(10).join('- ' + s for s in chk['steps'])}
+
+Enclosed: {('the documents listed in documents/ of this pack' )}.
+I declare that the information and copies submitted are true and correct.
+
+Yours faithfully,
+{get_kv('owner_name') or 'Ruwayne Campher'}
+{get_kv('owner_phone') or ''} {get_kv('owner_email') or ''}
+"""
+
+
+def annexure5_text(item: dict) -> str:
+    """Annexure 5 (Regulation 11(1)) - Application for Registration as a Registered Person, prefilled."""
+    cat = (item.get("notes") or "").upper()
+    tick = lambda *ks: "X" if any(k in cat for k in ks) else "___"
+    return f"""OCCUPATIONAL HEALTH AND SAFETY ACT, 1993 - REGULATION 11(1)
+ELECTRICAL INSTALLATION REGULATIONS, 2009 - ANNEXURE 5
+APPLICATION FOR REGISTRATION AS A REGISTERED PERSON (pre-filled by My AI Pro Registry)
+
+1. Surname / full name:        {get_kv('owner_name') or '________________'}
+2. Identity number:            {get_kv('owner_id') or '________________'}
+3. Postal address:             {get_kv('owner_address') or '________________'}
+4. Telephone / mobile:         {get_kv('owner_phone') or '________________'}
+5. E-mail:                     {get_kv('owner_email') or '________________'}
+6. Category applied for:
+   [ {tick('ETSP', 'SINGLE')} ] Electrical Tester for Single Phase
+   [ {tick('IE', 'INSTALLATION ELECTRICIAN')} ] Installation Electrician
+   [ {tick('MIE', 'MASTER')} ] Master Installation Electrician
+7. Current / previous registration number: {item.get('number') or 'none'}
+8. Qualifications attached: trade test / National Certificate, N-certificate,
+   Installation Rules Paper 1 & 2 results (see documents/)
+9. Practical experience: see employer letters in documents/
+10. Declaration: I declare the statements above and the attachments to be true.
+
+Signature: ______________________   Date: {time.strftime('%Y-%m-%d')}
+"""
+
+
+def smtp_send(subject: str, body: str, attach_name: str, attach_bytes: bytes) -> str:
+    host, port = get_kv("smtp_host"), int(get_kv("smtp_port") or "587")
+    user, pw, frm = get_kv("smtp_user"), get_kv("smtp_pass"), get_kv("smtp_from") or get_kv("smtp_user")
+    to = get_kv("doel_email")
+    if not (host and user and pw and to):
+        raise RuntimeError("SMTP or DoEL e-mail not configured in the Submission tab yet.")
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = frm
+    msg["To"] = to
+    msg.attach(MIMEText(body, "plain"))
+    part = MIMEApplication(attach_bytes, Name=attach_name)
+    part["Content-Disposition"] = f'attachment; filename="{attach_name}"'
+    msg.attach(part)
+    with smtplib.SMTP(host, port, timeout=60) as s:
+        s.starttls()
+        s.login(user, pw)
+        s.sendmail(frm, [to], msg.as_string())
+    return f"sent via {host} to {to}"
+
+
 # ---------------------------------------------------------------- registration
 def register(app, require_admin, bank_info) -> None:
     init()
@@ -255,6 +388,20 @@ Questions: 1109ruwayne@gmail.com</p></main></body></html>""")
         if not c or c[0]["voided"]:
             raise HTTPException(404, "Certificate not found or void.")
         cert = c[0]
+        sig = get_kv("signature")
+        signature_html = (f'<img class="sigimg" src="{sig}" alt="signature">' if sig
+                          else '<div class="script">Ruwayne Campher</div>')
+        ring = "RUWAYNE CAMPHER &#8226; MY AI PRO REGISTRY &#8226; REPUBLIC OF SOUTH AFRICA &#8226; "
+        stamp_svg = f"""<svg class="stamp" viewBox="0 0 200 200" role="img" aria-label="verification stamp">
+<defs><path id="ring{cert['code']}" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0"/></defs>
+<circle cx="100" cy="100" r="88" fill="none" stroke="#1f3f8f" stroke-width="3"/>
+<circle cx="100" cy="100" r="60" fill="none" stroke="#1f3f8f" stroke-width="1.6"/>
+<text font-size="10.5" fill="#1f3f8f" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="1.5">
+<textPath href="#ring{cert['code']}">{ring}</textPath></text>
+<text x="100" y="88" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="800" fill="#1f3f8f">VERIFIED</text>
+<text x="100" y="106" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#1f3f8f">{cert['code']}</text>
+<text x="100" y="121" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#1f3f8f">{cert['issued_on'] or ''}</text>
+</svg>"""
         return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Certificate {cert['code']}</title>
 <style>@page{{size:A4 landscape;margin:14mm}}body{{margin:0;background:#eef0f7;font-family:Georgia,'Times New Roman',serif;color:#1c2033}}
@@ -265,6 +412,11 @@ h1{{font-size:34px;margin:26px 0 6px;letter-spacing:.02em}} .holder{{font-size:2
 .meta{{display:flex;justify-content:space-between;gap:20px;font:12.5px/1.6 system-ui;color:#64698a;margin-top:34px}}
 .sig{{margin-top:44px;display:flex;justify-content:space-between;gap:40px;font:13px/1.5 system-ui}}
 .sig div{{flex:1;border-top:1.5px solid #1c2033;padding-top:6px}}
+.signrow{{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-top:38px}}
+.sigblock{{flex:1;text-align:left}} .sigline{{font:12.5px/1.4 system-ui;color:#3c4160;border-top:1.5px solid #1c2033;padding-top:6px;max-width:320px}}
+.sigimg{{height:64px;display:block;margin-bottom:6px}}
+.script{{font-family:'Segoe Script','Brush Script MT','Comic Sans MS',cursive;font-size:34px;color:#14265c;transform:rotate(-3deg);margin:0 0 6px}}
+.stampblock{{flex:none}} .stamp{{width:168px;height:168px;opacity:.92;transform:rotate(-8deg)}}
 button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
 @media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0;border-width:8px}}}}</style></head>
 <body><button onclick="window.print()">Print / save PDF</button>
@@ -275,7 +427,11 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 <p class="scope">{cert['body'] or ''}</p>
 <div class="meta"><span>Certificate no. <b>{cert['code']}</b></span><span>Issued {cert['issued_on'] or '-'}</span>
 <span>{('Valid until ' + cert['expires_on']) if cert['expires_on'] else 'No expiry date'}</span></div>
-<div class="sig"><div>Ruwayne Campher - issuer</div><div>Verify at /verify/{cert['code']}</div></div>
+<div class="signrow">
+  <div class="sigblock">{signature_html}<div class="sigline">Ruwayne Campher - issuer &amp; registered verifier</div></div>
+  <div class="stampblock">{stamp_svg}</div>
+</div>
+<div class="sig"><div>Signature as above</div><div>Verify at /verify/{cert['code']}</div></div>
 </div></body></html>""")
 
     # ---------------- public API
@@ -335,6 +491,8 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
                 "certs": _rows("SELECT * FROM certs ORDER BY created DESC"),
                 "orders": _rows("SELECT * FROM orders ORDER BY created DESC"),
                 "services": _rows("SELECT * FROM services ORDER BY id"),
+                "submissions": _rows("SELECT * FROM submissions ORDER BY created DESC"),
+                "settings": settings_masked(),
                 "checklists": CHECKLISTS}
 
     @app.post("/api/reg/items")
@@ -401,26 +559,97 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
         if not it:
             raise HTTPException(404, "Item not found.")
         it = it[0]
-        chk = CHECKLISTS.get(it["kind"], CHECKLISTS["certification"])
         docs = _rows("SELECT * FROM docs WHERE item_id=?", (iid,))
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            lines = [f"# {chk['label']} - application checklist", f"Authority: {chk['authority']}", ""]
-            lines += [f"- [ ] {s}" for s in chk["steps"]]
-            lines += ["", "Notes:", chk["notes"], ""]
-            z.writestr("CHECKLIST.md", "\n".join(lines))
-            summ = [f"Item: {it['title']}", f"Kind: {it['kind']}", f"Authority: {it['authority']}",
-                    f"Reference/number: {it['number'] or '-'}", f"Issued: {it['issued_on'] or '-'}",
-                    f"Expires: {it['expires_on'] or '-'}", f"Status: {it['status']}", "",
-                    f"Owner: Ruwayne Campher - packed {time.strftime('%Y-%m-%d %H:%M')}"]
-            z.writestr("SUMMARY.txt", "\n".join(summ))
-            for d in docs:
-                safe = re.sub(r"[^A-Za-z0-9._-]", "_", d["name"]) or "document"
-                z.writestr(f"documents/{safe}", d["data"])
-        buf.seek(0)
+        blob = build_pack_bytes(it, docs)
         safe = re.sub(r"[^A-Za-z0-9._-]", "_", it["title"])[:40] or "pack"
-        return Response(content=buf.read(), media_type="application/zip",
+        return Response(content=blob, media_type="application/zip",
                         headers={"Content-Disposition": f'attachment; filename="{safe}-pack.zip"'})
+
+    # ---------------- DoEL submission pipeline
+    @app.get("/annexure5/{iid}", response_class=HTMLResponse)
+    def annexure5_page(request: Request, iid: int):
+        require_admin(request)
+        it = _rows("SELECT * FROM items WHERE id=?", (iid,))
+        if not it:
+            raise HTTPException(404, "Item not found.")
+        txt = annexure5_text(it[0])
+        return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Annexure 5 - pre-filled</title>
+<style>body{{margin:0;background:#eef0f7;font:14px/1.7 ui-monospace,monospace;color:#1c2033}}
+main{{max-width:820px;margin:24px auto;background:#fff;border:1px solid #d8dae6;padding:34px 40px;white-space:pre-wrap}}
+button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:0;background:#5b5bd6;color:#fff;cursor:pointer}}
+@media print{{button{{display:none}}body{{background:#fff}}main{{margin:0;border:0}}}}</style></head>
+<body><button onclick="window.print()">Print / save PDF</button><main>{txt}</main></body></html>""")
+
+    @app.get("/api/reg/settings")
+    def get_settings(request: Request):
+        require_admin(request)
+        return settings_masked()
+
+    @app.post("/api/reg/settings")
+    async def put_settings(request: Request):
+        require_admin(request)
+        body = await request.json()
+        for k in SETTING_KEYS:
+            if k not in body:
+                continue
+            v = str(body[k] or "")
+            if k == "smtp_pass" and (not v or v == "••••••••"):
+                continue                      # keep the stored secret
+            if k == "signature" and len(v) > 900_000:
+                raise HTTPException(413, "Signature image too large.")
+            set_kv(k, v[:2000] if k != "signature" else v)
+        return {"ok": True}
+
+    @app.post("/api/reg/submit/{iid}")
+    def submit_item(request: Request, iid: int):
+        require_admin(request)
+        it = _rows("SELECT * FROM items WHERE id=?", (iid,))
+        if not it:
+            raise HTTPException(404, "Item not found.")
+        it = it[0]
+        docs = _rows("SELECT * FROM docs WHERE item_id=?", (iid,))
+        blob = build_pack_bytes(it, docs)
+        target = get_kv("doel_email") or "(not configured)"
+        with _lock, _connect() as con:
+            cur = con.execute("INSERT INTO submissions(item_id, channel, target, status, log, created, sent_at)"
+                              " VALUES (?,?,?,?,?,?,0)",
+                              (iid, "email", target, "sending", "", time.time()))
+            sid = cur.lastrowid
+            con.commit()
+        threading.Thread(target=backup_now, kwargs={"force": True}, daemon=True).start()
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", it["title"])[:40] or "pack"
+
+        def work():
+            try:
+                log = smtp_send(f"Wireman's licence / registered-person application - {it['title']} "
+                                f"[{it['number'] or 'new'}]",
+                                cover_letter(it), f"{safe}-pack.zip", blob)
+                st = "sent"
+            except Exception as exc:                      # noqa: BLE001 - logged for the owner
+                log, st = f"{type(exc).__name__}: {exc}", "failed"
+            with _lock, _connect() as con:
+                con.execute("UPDATE submissions SET status=?, log=?, sent_at=? WHERE id=?",
+                            (st, log[:2000], time.time(), sid))
+                con.commit()
+            threading.Thread(target=backup_now, kwargs={"force": True}, daemon=True).start()
+
+        threading.Thread(target=work, daemon=True).start()
+        return {"ok": True, "id": sid, "status": "sending",
+                "note": "Pack assembled and handing over to your configured SMTP channel."}
+
+    @app.get("/api/reg/submissions")
+    def list_submissions(request: Request):
+        require_admin(request)
+        return {"submissions": _rows("SELECT * FROM submissions ORDER BY created DESC")}
+
+    @app.post("/api/reg/submissions/{sid}/retry")
+    def retry_submission(request: Request, sid: int):
+        require_admin(request)
+        s = _rows("SELECT * FROM submissions WHERE id=?", (sid,))
+        if not s:
+            raise HTTPException(404, "Submission not found.")
+        return submit_item(request, s[0]["item_id"])
 
     @app.post("/api/reg/certs")
     async def issue_cert(request: Request):

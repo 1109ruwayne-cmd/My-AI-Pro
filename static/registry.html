@@ -66,6 +66,7 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
       <button class="tab on" data-tab="vault" type="button">🗂 Vault</button>
       <button class="tab" data-tab="certs" type="button">🎓 Certificates</button>
       <button class="tab" data-tab="orders" type="button">🧾 Orders</button>
+      <button class="tab" data-tab="submit" type="button">📨 Submission</button>
       <button class="tab" data-tab="services" type="button">💼 Services</button>
     </div>
 
@@ -112,6 +113,39 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
 
     <section id="tab-orders" hidden>
       <div class="card"><b>Client orders (EFT)</b><div id="orderList" style="margin-top:8px"></div></div>
+    </section>
+
+    <section id="tab-submit" hidden>
+      <div class="card">
+        <b>Your details (pre-fill every form &amp; pack)</b>
+        <div class="grid">
+          <div><label class="lbl">Full name</label><input id="stName"></div>
+          <div><label class="lbl">ID number</label><input id="stId"></div>
+          <div><label class="lbl">Phone</label><input id="stPhone"></div>
+          <div><label class="lbl">E-mail</label><input id="stEmail"></div>
+        </div>
+        <label class="lbl">Postal address</label><input id="stAddr">
+      </div>
+      <div class="card">
+        <b>Department of Employment and Labour - automatic submission</b>
+        <p class="help">The DoEL has no public upload API, so the app does the maximum lawful automation:
+        it fills the Annexure 5 form, packs your licence card + documents + cover letter, and e-mails the
+        pack straight to the provincial OHS office address below through your own mail server (Gmail app
+        password works). Every send is logged below with retries.</p>
+        <div class="grid">
+          <div><label class="lbl">DoEL office e-mail (target)</label><input id="stDoel" placeholder="provincial OHS office e-mail"></div>
+          <div><label class="lbl">SMTP host</label><input id="stSmtpHost" placeholder="smtp.gmail.com"></div>
+          <div><label class="lbl">SMTP port</label><input id="stSmtpPort" value="587"></div>
+          <div><label class="lbl">SMTP user</label><input id="stSmtpUser" placeholder="you@gmail.com"></div>
+          <div><label class="lbl">SMTP password / app password</label><input id="stSmtpPass" type="password" placeholder="••••••••"></div>
+          <div><label class="lbl">From address</label><input id="stSmtpFrom" placeholder="defaults to SMTP user"></div>
+        </div>
+        <label class="lbl">Your signature (upload a photo/scan of it - used on certificates)</label>
+        <div class="row"><input type="file" id="stSigFile" accept="image/*" style="flex:1">
+        <img id="stSigPrev" alt="signature preview" style="height:52px;display:none"></div>
+        <p style="margin:12px 0 0"><button class="btn pri" id="stSave" type="button">Save submission settings</button></p>
+      </div>
+      <div class="card"><b>Submission log</b><div id="subList" style="margin-top:8px"></div></div>
     </section>
 
     <section id="tab-services" hidden>
@@ -163,7 +197,7 @@ document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click', function(){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
-    ['vault','certs','orders','services'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
+    ['vault','certs','orders','submit','services'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
   });
 });
 
@@ -208,6 +242,8 @@ function renderItems(){
       '<div class="row" style="margin-top:10px">' +
       '<label class="btn sm" style="cursor:pointer">⬆ Upload document<input type="file" data-up="' + it.id + '" hidden></label>' +
       '<button class="btn sm" data-pack="' + it.id + '" type="button">📦 Download application pack</button>' +
+      '<button class="btn sm" data-sub="' + it.id + '" type="button">📨 Submit to DoEL</button>' +
+      (it.kind === 'licence' ? '<button class="btn sm" data-a5="' + it.id + '" type="button">Annexure 5</button>' : '') +
       '<button class="btn sm danger" data-del="' + it.id + '" type="button">Delete item</button></div>' +
       '<ul class="chk">' + (((OV.checklists[it.kind] || {}).steps) || []).slice(0, 4).map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('') +
       (((OV.checklists[it.kind] || {}).steps || []).length > 4 ? '<li>… full checklist ships inside the pack</li>' : '') + '</ul></div>';
@@ -242,10 +278,76 @@ function renderItems(){
           toast('Pack downloaded - checklist + documents inside.'); });
     });
   });
+  box.querySelectorAll('[data-sub]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.getAttribute('data-sub');
+      api('/api/reg/submit/' + id, { method: 'POST' }).then(function(d){
+        toast('Submission started - see the Submission tab log.');
+        document.querySelector('[data-tab="submit"]').click(); load();
+      }).catch(function(e){ toast(e.message, true); });
+    });
+  });
+  box.querySelectorAll('[data-a5]').forEach(function(b){
+    b.addEventListener('click', function(){
+      window.open('/annexure5/' + b.getAttribute('data-a5'), '_blank');
+    });
+  });
   box.querySelectorAll('[data-del]').forEach(function(b){
     b.addEventListener('click', function(){
       if (!confirm('Delete this item and its documents?')) return;
       api('/api/reg/items/' + b.getAttribute('data-del'), { method: 'DELETE' }).then(function(){ toast('Deleted.'); load(); });
+    });
+  });
+}
+
+/* submission tab */
+function fillSettings(){
+  var s = (OV && OV.settings) || {};
+  $('#stName').value = s.owner_name || ''; $('#stId').value = s.owner_id || '';
+  $('#stPhone').value = s.owner_phone || ''; $('#stEmail').value = s.owner_email || '';
+  $('#stAddr').value = s.owner_address || ''; $('#stDoel').value = s.doel_email || '';
+  $('#stSmtpHost').value = s.smtp_host || ''; $('#stSmtpPort').value = s.smtp_port || '587';
+  $('#stSmtpUser').value = s.smtp_user || ''; $('#stSmtpFrom').value = s.smtp_from || '';
+  $('#stSmtpPass').value = ''; $('#stSmtpPass').placeholder = s.smtp_pass || 'app password (kept secret)';
+  if (s.signature) { $('#stSigPrev').src = s.signature; $('#stSigPrev').style.display = 'block'; }
+}
+$('#stSave').addEventListener('click', function(){
+  var body = { owner_name: $('#stName').value, owner_id: $('#stId').value, owner_phone: $('#stPhone').value,
+    owner_email: $('#stEmail').value, owner_address: $('#stAddr').value, doel_email: $('#stDoel').value,
+    smtp_host: $('#stSmtpHost').value, smtp_port: $('#stSmtpPort').value, smtp_user: $('#stSmtpUser').value,
+    smtp_from: $('#stSmtpFrom').value };
+  if ($('#stSmtpPass').value) body.smtp_pass = $('#stSmtpPass').value;
+  api('/api/reg/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) })
+    .then(function(){ toast('Submission settings saved.'); load(); })
+    .catch(function(e){ toast(e.message, true); });
+});
+$('#stSigFile').addEventListener('change', function(){
+  var f = $('#stSigFile').files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    var data = r.result;
+    api('/api/reg/settings', { method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ signature: data }) })
+      .then(function(){ toast('Signature saved - it now signs every certificate.'); $('#stSigPrev').src = data; $('#stSigPrev').style.display = 'block'; })
+      .catch(function(e){ toast(e.message, true); });
+  };
+  r.readAsDataURL(f);
+});
+function renderSubs(){
+  var rows = (OV.submissions || []);
+  $('#subList').innerHTML = rows.length ? '<table><tr><th>When</th><th>Item</th><th>Target</th><th>Status</th><th></th></tr>' +
+    rows.map(function(s){
+      var it = (OV.items || []).filter(function(i){ return i.id === s.item_id; })[0];
+      return '<tr><td class="meta">' + new Date(s.created * 1000).toLocaleString() + '</td><td>' + esc(it ? it.title : ('#' + s.item_id)) +
+        '</td><td class="meta">' + esc(s.target) + '</td><td><span class="badge ' + (s.status === 'sent' ? 'ok' : s.status === 'failed' ? 'exp' : 'warn') + '">' +
+        esc(s.status) + '</span><div class="meta">' + esc(s.log || '') + '</div></td><td>' +
+        (s.status !== 'sent' ? '<button class="btn sm" data-retry="' + s.id + '" type="button">Retry</button>' : '') + '</td></tr>';
+    }).join('') + '</table>'
+    : '<div class="help">No submissions yet. Use “📨 Submit to DoEL” on any vault item.</div>';
+  $('#subList').querySelectorAll('[data-retry]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/submissions/' + b.getAttribute('data-retry') + '/retry', { method: 'POST' })
+        .then(function(){ toast('Retry started.'); load(); }).catch(function(e){ toast(e.message, true); });
     });
   });
 }
@@ -306,7 +408,7 @@ function renderServices(){
   });
 }
 
-function render(){ showChk(); renderItems(); renderCerts(); renderOrders(); renderServices(); }
+function render(){ showChk(); renderItems(); renderCerts(); renderOrders(); renderSubs(); renderServices(); fillSettings(); }
 function load(){ api('/api/reg/overview').then(function(d){ OV = d; render(); }).catch(function(e){ toast(e.message, true); }); }
 tryLoad();
 </script>
