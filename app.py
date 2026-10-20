@@ -1552,6 +1552,12 @@ async def security_headers(request: Request, call_next):
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
+# ---- Registry: personal SA certification / CIPC / wireman's licence desk ----
+import registry
+
+registry.register(app, require_admin=require_admin,
+                  bank_info=lambda: billing.public_billing(load_config()).get("bank", {}))
+
 
 if __name__ == "__main__":
     import sys

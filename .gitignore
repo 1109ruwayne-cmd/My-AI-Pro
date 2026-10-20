@@ -4,3 +4,4 @@ __pycache__/
 knowledge/.upload-*
 usage.db
 knowledge/0[1-7]-source-*.md
+registry.db

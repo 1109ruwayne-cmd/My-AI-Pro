@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registration services - My AI Pro Registry</title>
+<style>
+:root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);
+--accent:#5b5bd6;--accent2:#8b5cf6;--accent-soft:#edecff;--accent-ink:#4444c0;--ring:rgba(91,91,214,.16);--ok:#1f9468;--warn:#9a6210}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1100px 520px at 88% -12%,var(--ring),transparent 62%),var(--bg);
+color:var(--text);font:15.5px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+header{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);display:flex;align-items:center;gap:12px;padding:12px 20px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:grid;place-items:center;font-weight:700}
+h1{font-size:16px;margin:0}header a{margin-left:auto;color:var(--accent-ink);font-weight:600;font-size:13.5px;text-decoration:none}
+main{max-width:900px;margin:0 auto;padding:26px 18px 70px}
+.hero{text-align:center;margin:2vh 0 26px}
+.hero h2{font-size:clamp(24px,3.2vw,32px);letter-spacing:-.02em;margin:0 0 8px}
+.hero p{color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.svc{background:var(--surface);border:1px solid var(--hair);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07);display:flex;flex-direction:column;gap:6px}
+.svc b{font-size:15px;letter-spacing:-.01em}.svc p{margin:0;color:var(--muted);font-size:13px;flex:1}
+.price{font-size:22px;font-weight:800;color:var(--accent-ink);letter-spacing:-.02em}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07);margin-top:16px}
+.lbl{display:block;font-weight:650;font-size:13px;margin:10px 0 5px}
+input,select{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:var(--surface);font:inherit}
+input:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.btn{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:12px;padding:11px 18px;font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 6px 16px var(--ring)}
+.btn.ghost{background:var(--surface);color:var(--accent-ink);border:1px solid var(--accent);box-shadow:none}
+.bank{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;font-size:14px;margin-top:12px}
+.bank b{color:var(--muted);font-weight:650}.bank code{font-family:ui-monospace,monospace}
+.ref{font-family:ui-monospace,monospace;font-size:18px;font-weight:700;background:var(--accent-soft);color:var(--accent-ink);border-radius:10px;padding:6px 12px;display:inline-block}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+.verify{margin-top:26px;text-align:center;color:var(--muted);font-size:13.5px}
+.verify a{color:var(--accent-ink);font-weight:600}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="logo">R</div><h1>Registration services</h1><a href="/">&larr; My AI Pro</a></header>
+<main>
+  <div class="hero"><h2>Document packs &amp; certifications, prepared properly</h2>
+  <p>Wireman's licence (Dept of Employment and Labour) · CIPC company registration · SAQA verification · branded certificates</p></div>
+  <div class="grid" id="svcs"></div>
+
+  <div class="card">
+    <b>Order a service</b>
+    <div class="grid" style="margin-top:6px">
+      <div><label class="lbl">Your full name</label><input id="oName" placeholder="name & surname"></div>
+      <div><label class="lbl">Email or phone</label><input id="oContact" placeholder="how we reach you"></div>
+      <div><label class="lbl">Service</label><select id="oSvc"></select></div>
+    </div>
+    <p style="margin:14px 0 0"><button class="btn" id="oGo" type="button">Get payment details</button></p>
+    <div id="oResult" hidden>
+      <p style="margin:14px 0 4px">Pay <b id="oAmt"></b> by EFT with reference:</p>
+      <span class="ref" id="oRef"></span>
+      <div class="bank" id="oBank"></div>
+      <p style="margin:12px 0 0"><button class="btn ghost" id="oPaid" type="button">I have paid</button></p>
+      <p class="note" id="oNote"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <b>Verify a certificate</b>
+    <div class="row" style="display:flex;gap:8px;margin-top:8px">
+      <input id="vCode" placeholder="e.g. RC-2026-A1B2" style="flex:1">
+      <button class="btn ghost" id="vGo" type="button">Verify</button>
+    </div>
+    <p class="note" id="vOut"></p>
+  </div>
+  <p class="verify">Issued under the name of Ruwayne Campher · South Africa · questions: 1109ruwayne@gmail.com</p>
+</main>
+<script>
+var SV = [];
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+fetch('/api/reg/services').then(function(r){ return r.json(); }).then(function(d){
+  SV = d.services || [];
+  $('#svcs').innerHTML = SV.map(function(s){ return '<div class="svc"><b>' + esc(s.name) + '</b><p>' + esc(s.descr) + '</p><span class="price">R' + Number(s.price).toFixed(0) + '</span></div>'; }).join('') || '<p class="note">No services open right now.</p>';
+  $('#oSvc').innerHTML = SV.map(function(s){ return '<option value="' + s.id + '">' + esc(s.name) + ' — R' + Number(s.price).toFixed(0) + '</option>'; }).join('');
+  window.BANK = d.bank || {};
+});
+$('#oGo').addEventListener('click', function(){
+  fetch('/api/reg/orders', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    client: $('#oName').value, contact: $('#oContact').value, service_id: Number($('#oSvc').value || 0) }) })
+    .then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error(j.detail || 'failed'); return j; }); })
+    .then(function(d){
+      $('#oResult').hidden = false;
+      $('#oAmt').textContent = 'R' + Number(d.amount).toFixed(2);
+      $('#oRef').textContent = d.ref;
+      var b = d.bank || {};
+      $('#oBank').innerHTML = '<b>Bank</b><span>' + esc(b.bank || '-') + '</span><b>Account name</b><span>' + esc(b.account_name || '-') +
+        '</span><b>Account number</b><code>' + esc(b.account_number || '-') + '</code><b>Branch code</b><code>' + esc(b.branch || '-') +
+        '</code><b>Reference</b><code>' + esc(d.ref) + '</code>';
+      $('#oNote').textContent = d.note || '';
+      window.CURREF = d.ref;
+    })
+    .catch(function(e){ alert(e.message); });
+});
+$('#oPaid').addEventListener('click', function(){
+  fetch('/api/reg/orders/confirm', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ref: window.CURREF }) })
+    .then(function(r){ return r.json(); }).then(function(d){ $('#oNote').textContent = d.note || 'Confirmed.'; });
+});
+$('#vGo').addEventListener('click', function(){
+  fetch('/api/reg/verify/' + encodeURIComponent(($('#vCode').value || '').trim())).then(function(r){ return r.json(); }).then(function(d){
+    $('#vOut').innerHTML = d.state === 'valid' ? '✅ <b>VALID</b> — ' + esc(d.holder) + ' · ' + esc(d.type) + (d.expires ? ' · valid until ' + esc(d.expires) : '')
+      : d.state === 'void' ? '⛔ This certificate has been <b>voided</b>.' : '❌ No certificate matches that code.';
+  });
+});
+</script>
+</body>
+</html>

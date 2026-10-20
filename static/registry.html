@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registry - My AI Pro</title>
+<style>
+:root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);
+--accent:#5b5bd6;--accent2:#8b5cf6;--accent-soft:#edecff;--accent-ink:#4444c0;--ring:rgba(91,91,214,.16);
+--danger:#cf4040;--warn:#9a6210;--ok:#1f9468;--shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1100px 520px at 88% -12%,var(--ring),transparent 62%),var(--bg);
+color:var(--text);font:15px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);
+display:flex;align-items:center;gap:12px;padding:12px 20px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:grid;place-items:center;font-weight:700}
+h1{font-size:16px;margin:0;letter-spacing:-.01em}header a{margin-left:auto;color:var(--accent-ink);font-weight:600;font-size:13.5px;text-decoration:none}
+main{max-width:1060px;margin:0 auto;padding:22px 18px 60px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.tab{border:1px solid var(--border);background:var(--surface);border-radius:99px;padding:6px 14px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer}
+.tab.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:14px}
+.lbl{display:block;font-weight:650;font-size:13px;margin:10px 0 5px}
+input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--surface);font:inherit;color:var(--text)}
+input:focus,textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface);border-radius:10px;
+padding:8px 13px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.14s}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff;box-shadow:0 6px 16px var(--ring)}
+.btn.sm{padding:5px 9px;font-size:12.5px;border-radius:8px}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-block;border-radius:99px;padding:2px 10px;font-size:11.5px;font-weight:700;background:var(--surface2);color:var(--muted);border:1px solid var(--hair)}
+.badge.kind{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.badge.exp{background:#fdf1f1;color:var(--danger);border-color:transparent}
+.badge.ok{background:#eaf7f1;color:var(--ok);border-color:transparent}
+.badge.warn{background:#fff8e8;color:var(--warn);border-color:transparent}
+.item h3{margin:0 0 4px;font-size:15.5px;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:12.5px}
+.docs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.doc{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:6px 10px;font-size:13px}
+.doc span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.chk{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top}
+.help{font-size:12.5px;color:var(--muted)}
+#gate{max-width:420px;margin:12vh auto;text-align:center}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#1f2136;color:#fff;border-radius:12px;padding:10px 16px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+.toast.show{opacity:1}.toast.err{background:#a33232}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="logo">R</div><h1>Registry &middot; certifications, CIPC &amp; wireman's desk</h1><a href="/">&larr; Back to My AI</a></header>
+<main>
+  <div class="card" id="gate">
+    <h3 style="margin-top:0"> Owner sign-in</h3>
+    <p class="help">This desk is private. Enter your owner password to open it.</p>
+    <input id="gatePw" type="password" placeholder="Owner password">
+    <p><button class="btn pri" id="gateGo" type="button">Open my registry</button></p>
+    <p class="help" id="gateErr" style="color:var(--danger)"></p>
+  </div>
+
+  <div id="desk" hidden>
+    <div class="tabs">
+      <button class="tab on" data-tab="vault" type="button">🗂 Vault</button>
+      <button class="tab" data-tab="certs" type="button">🎓 Certificates</button>
+      <button class="tab" data-tab="orders" type="button">🧾 Orders</button>
+      <button class="tab" data-tab="services" type="button">💼 Services</button>
+    </div>
+
+    <section id="tab-vault">
+      <div class="card">
+        <b>Add to your vault</b>
+        <div class="grid">
+          <div><label class="lbl">Kind</label><select id="itKind">
+            <option value="licence">Wireman's licence (DoEL)</option>
+            <option value="business">Business / company (CIPC)</option>
+            <option value="certification">Certification (SAQA / other)</option>
+            <option value="certificate">Own branded certificate</option>
+          </select></div>
+          <div><label class="lbl">Title</label><input id="itTitle" placeholder="e.g. Installation Electrician registration"></div>
+          <div><label class="lbl">Reference / number</label><input id="itNum" placeholder="reg / enterprise / cert no."></div>
+          <div><label class="lbl">Issued</label><input id="itIssued" type="date"></div>
+          <div><label class="lbl">Expires / renewal</label><input id="itExp" type="date"></div>
+          <div><label class="lbl">Status</label><select id="itStatus">
+            <option>active</option><option>pending</option><option>renewal-due</option><option>expired</option><option>superseded</option>
+          </select></div>
+        </div>
+        <label class="lbl">Notes</label><textarea id="itNotes" rows="2" placeholder="category, conditions, inspector notes…"></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn pri" id="itAdd" type="button">Save to vault</button>
+        <span class="help" id="chkLabel"></span></div>
+        <ul class="chk" id="chkSteps"></ul>
+      </div>
+      <div id="items"></div>
+    </section>
+
+    <section id="tab-certs" hidden>
+      <div class="card">
+        <b>Issue a branded certificate</b>
+        <div class="grid">
+          <div><label class="lbl">Holder</label><input id="cHolder" placeholder="full name of the holder"></div>
+          <div><label class="lbl">Certificate</label><input id="cType" placeholder="e.g. Competence - Domestic Electrical Inspection"></div>
+          <div><label class="lbl">Expires (optional)</label><input id="cExp" type="date"></div>
+        </div>
+        <label class="lbl">Scope / wording on the certificate</label>
+        <textarea id="cBody" rows="2" placeholder="what this certificate covers and its limits"></textarea>
+        <p style="margin:10px 0 0"><button class="btn pri" id="cIssue" type="button">Issue certificate</button></p>
+      </div>
+      <div class="card"><div id="certList"></div></div>
+    </section>
+
+    <section id="tab-orders" hidden>
+      <div class="card"><b>Client orders (EFT)</b><div id="orderList" style="margin-top:8px"></div></div>
+    </section>
+
+    <section id="tab-services" hidden>
+      <div class="card">
+        <b>Price list</b>
+        <div class="grid" style="margin-top:8px">
+          <div><label class="lbl">New service</label><input id="sName" placeholder="service name"></div>
+          <div><label class="lbl">Price (R)</label><input id="sPrice" type="number" value="250"></div>
+        </div>
+        <label class="lbl">Description</label><input id="sDesc" placeholder="what the client gets">
+        <p style="margin:10px 0 0"><button class="btn pri" id="sAdd" type="button">Add service</button></p>
+      </div>
+      <div class="card"><div id="svcList"></div></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+var OV = null;
+function $(s){ return document.querySelector(s); }
+function toast(m, e){ var t = $('#toast'); t.textContent = m; t.className = 'toast show' + (e ? ' err' : ''); setTimeout(function(){ t.className = 'toast'; }, 3200); }
+function api(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({'X-Admin-Password': sessionStorage.getItem('myai.admin') || ''}, opts.headers || {});
+  return fetch(path, opts).then(function(r){
+    if (r.status === 401 || r.status === 403) throw new Error('owner password required');
+    if (!r.ok) return r.json().then(function(j){ throw new Error(j.detail || ('HTTP ' + r.status)); }, function(){ throw new Error('HTTP ' + r.status); });
+    return r.json();
+  });
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function money(v){ return 'R' + Number(v || 0).toFixed(0); }
+
+/* gate */
+function tryLoad(){
+  api('/api/reg/overview').then(function(d){
+    OV = d; $('#gate').hidden = true; $('#desk').hidden = false; render();
+  }).catch(function(){ $('#gate').hidden = false; $('#desk').hidden = true; });
+}
+$('#gateGo').addEventListener('click', function(){
+  sessionStorage.setItem('myai.admin', $('#gatePw').value || '');
+  api('/api/reg/overview').then(function(d){ OV = d; $('#gate').hidden = true; $('#desk').hidden = false; render(); })
+    .catch(function(){ $('#gateErr').textContent = 'That password was not accepted.'; });
+});
+$('#gatePw').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('#gateGo').click(); });
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
+    t.classList.add('on');
+    ['vault','certs','orders','services'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
+  });
+});
+
+/* checklist preview */
+function showChk(){
+  var k = $('#itKind').value, c = (OV && OV.checklists[k]) || null;
+  $('#chkLabel').textContent = c ? c.label + ' — ' + c.authority : '';
+  $('#chkSteps').innerHTML = c ? c.steps.map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('') : '';
+}
+$('#itKind').addEventListener('change', showChk);
+
+/* vault */
+$('#itAdd').addEventListener('click', function(){
+  api('/api/reg/items', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    kind: $('#itKind').value, title: $('#itTitle').value, number: $('#itNum').value,
+    issued_on: $('#itIssued').value, expires_on: $('#itExp').value, status: $('#itStatus').value, notes: $('#itNotes').value }) })
+    .then(function(){ toast('Saved to your vault.'); $('#itTitle').value = $('#itNum').value = $('#itNotes').value = ''; load(); })
+    .catch(function(e){ toast(e.message, true); });
+});
+function expiryBadge(it){
+  if (!it.expires_on) return '';
+  var d = (new Date(it.expires_on) - Date.now()) / 86400000;
+  if (d < 0) return ' <span class="badge exp">expired</span>';
+  if (d < 45) return ' <span class="badge exp">renew in ' + Math.max(0, Math.round(d)) + 'd</span>';
+  return ' <span class="badge ok">valid</span>';
+}
+function renderItems(){
+  var box = $('#items');
+  if (!OV.items.length) { box.innerHTML = '<div class="card help">Your vault is empty - add your first certification, company or licence above.</div>'; return; }
+  box.innerHTML = OV.items.map(function(it){
+    var docs = (it.docs || []).map(function(d){
+      return '<div class="doc"><span title="' + esc(d.name) + '">📄 ' + esc(d.name) + ' <i class="meta">(' + Math.round(d.size/1024) + ' KB)</i></span>' +
+        '<button class="btn sm" data-dl="' + d.id + '" type="button">Open</button>' +
+        '<button class="btn sm danger" data-ddoc="' + d.id + '" type="button">Delete</button></div>';
+    }).join('');
+    return '<div class="card item"><div class="row"><h3>' + esc(it.title) + '</h3><span class="badge kind">' + esc(it.kind) + '</span>' +
+      '<span class="badge">' + esc(it.status || '-') + '</span>' + expiryBadge(it) + '</div>' +
+      '<div class="meta">' + esc(it.authority) + (it.number ? ' · no. ' + esc(it.number) : '') +
+      (it.issued_on ? ' · issued ' + esc(it.issued_on) : '') + (it.expires_on ? ' · expires ' + esc(it.expires_on) : '') + '</div>' +
+      (it.notes ? '<div class="meta" style="margin-top:4px">' + esc(it.notes) + '</div>' : '') +
+      '<div class="docs">' + docs + '</div>' +
+      '<div class="row" style="margin-top:10px">' +
+      '<label class="btn sm" style="cursor:pointer">⬆ Upload document<input type="file" data-up="' + it.id + '" hidden></label>' +
+      '<button class="btn sm" data-pack="' + it.id + '" type="button">📦 Download application pack</button>' +
+      '<button class="btn sm danger" data-del="' + it.id + '" type="button">Delete item</button></div>' +
+      '<ul class="chk">' + (((OV.checklists[it.kind] || {}).steps) || []).slice(0, 4).map(function(s){ return '<li>' + esc(s) + '</li>'; }).join('') +
+      (((OV.checklists[it.kind] || {}).steps || []).length > 4 ? '<li>… full checklist ships inside the pack</li>' : '') + '</ul></div>';
+  }).join('');
+  box.querySelectorAll('[data-up]').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var f = inp.files[0]; if (!f) return;
+      var fd = new FormData(); fd.append('file', f);
+      fetch('/api/reg/docs?item_id=' + inp.getAttribute('data-up'), { method: 'POST', body: fd,
+        headers: {'X-Admin-Password': sessionStorage.getItem('myai.admin') || ''} })
+        .then(function(r){ if (!r.ok) throw new Error('upload failed'); toast('Document stored.'); load(); })
+        .catch(function(e){ toast(e.message, true); });
+    });
+  });
+  box.querySelectorAll('[data-dl]').forEach(function(b){
+    b.addEventListener('click', function(){
+      fetch('/api/reg/docs/' + b.getAttribute('data-dl'), { headers: {'X-Admin-Password': sessionStorage.getItem('myai.admin') || ''} })
+        .then(function(r){ return r.blob(); }).then(function(bl){
+          var u = URL.createObjectURL(bl), a = document.createElement('a'); a.href = u; a.download = 'document'; a.click(); });
+    });
+  });
+  box.querySelectorAll('[data-ddoc]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/docs/' + b.getAttribute('data-ddoc'), { method: 'DELETE' }).then(function(){ toast('Document deleted.'); load(); });
+    });
+  });
+  box.querySelectorAll('[data-pack]').forEach(function(b){
+    b.addEventListener('click', function(){
+      fetch('/api/reg/pack/' + b.getAttribute('data-pack'), { headers: {'X-Admin-Password': sessionStorage.getItem('myai.admin') || ''} })
+        .then(function(r){ return r.blob(); }).then(function(bl){
+          var u = URL.createObjectURL(bl), a = document.createElement('a'); a.href = u; a.download = 'application-pack.zip'; a.click();
+          toast('Pack downloaded - checklist + documents inside.'); });
+    });
+  });
+  box.querySelectorAll('[data-del]').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (!confirm('Delete this item and its documents?')) return;
+      api('/api/reg/items/' + b.getAttribute('data-del'), { method: 'DELETE' }).then(function(){ toast('Deleted.'); load(); });
+    });
+  });
+}
+
+/* certs */
+$('#cIssue').addEventListener('click', function(){
+  api('/api/reg/certs', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    holder: $('#cHolder').value, ctype: $('#cType').value, body: $('#cBody').value, expires_on: $('#cExp').value }) })
+    .then(function(d){ toast('Issued ' + d.code + ' - printable page ready.'); $('#cHolder').value = $('#cType').value = $('#cBody').value = ''; load(); })
+    .catch(function(e){ toast(e.message, true); });
+});
+function renderCerts(){
+  $('#certList').innerHTML = OV.certs.length ? '<table><tr><th>Code</th><th>Holder</th><th>Certificate</th><th>Expires</th><th></th></tr>' +
+    OV.certs.map(function(c){ return '<tr><td><code>' + esc(c.code) + '</code></td><td>' + esc(c.holder) + '</td><td>' + esc(c.ctype) + '</td><td>' +
+      (c.expires_on || 'no expiry') + '</td><td class="row"><a class="btn sm" href="/cert/' + esc(c.code) + '" target="_blank">View</a>' +
+      '<a class="btn sm" href="/verify/' + esc(c.code) + '" target="_blank">Verify</a>' +
+      (c.voided ? '<span class="badge exp">void</span>' : '<button class="btn sm danger" data-void="' + c.id + '" type="button">Void</button>') +
+      '</td></tr>'; }).join('') + '</table>' : '<div class="help">No certificates issued yet.</div>';
+  $('#certList').querySelectorAll('[data-void]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/certs/' + b.getAttribute('data-void') + '/void', { method: 'POST' }).then(function(){ toast('Certificate voided.'); load(); });
+    });
+  });
+}
+
+/* orders */
+function renderOrders(){
+  $('#orderList').innerHTML = OV.orders.length ? '<table><tr><th>Ref</th><th>Client</th><th>Service</th><th>Amount</th><th>Status</th><th></th></tr>' +
+    OV.orders.map(function(o){ return '<tr><td><code>' + esc(o.ref) + '</code></td><td>' + esc(o.client) + '<div class="meta">' + esc(o.contact) + '</div></td><td>' +
+      esc(o.service) + '</td><td>' + money(o.amount) + '</td><td><span class="badge ' + (o.status === 'verifying' ? 'warn' : o.status === 'fulfilled' ? 'ok' : '') + '">' +
+      esc(o.status) + '</span></td><td class="row">' +
+      (o.status !== 'fulfilled' ? '<button class="btn sm" data-os="fulfilled" data-id="' + o.id + '" type="button">Mark fulfilled</button>' : '') +
+      (o.status !== 'rejected' ? '<button class="btn sm danger" data-os="rejected" data-id="' + o.id + '" type="button">Reject</button>' : '') +
+      '</td></tr>'; }).join('') + '</table>' : '<div class="help">No orders yet - your public order desk lives at /services.</div>';
+  $('#orderList').querySelectorAll('[data-os]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/orders/' + b.getAttribute('data-id') + '/status', { method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: b.getAttribute('data-os') }) }).then(function(){ toast('Order updated.'); load(); });
+    });
+  });
+}
+
+/* services */
+$('#sAdd').addEventListener('click', function(){
+  api('/api/reg/services', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    name: $('#sName').value, price: Number($('#sPrice').value || 0), descr: $('#sDesc').value }) })
+    .then(function(){ toast('Service added.'); load(); }).catch(function(e){ toast(e.message, true); });
+});
+function renderServices(){
+  $('#svcList').innerHTML = '<table><tr><th>Service</th><th>Price</th><th></th></tr>' + OV.services.map(function(s){
+    return '<tr><td>' + esc(s.name) + '<div class="meta">' + esc(s.descr) + '</div></td><td>' + money(s.price) + '</td><td>' +
+      '<button class="btn sm" data-tg="' + s.id + '" type="button">' + (s.active ? 'Hide from public' : 'Show publicly') + '</button></td></tr>';
+  }).join('') + '</table>';
+  $('#svcList').querySelectorAll('[data-tg]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/services/' + b.getAttribute('data-tg') + '/toggle', { method: 'POST' }).then(function(){ load(); });
+    });
+  });
+}
+
+function render(){ showChk(); renderItems(); renderCerts(); renderOrders(); renderServices(); }
+function load(){ api('/api/reg/overview').then(function(d){ OV = d; render(); }).catch(function(e){ toast(e.message, true); }); }
+tryLoad();
+</script>
+</body>
+</html>
