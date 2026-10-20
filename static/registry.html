@@ -69,6 +69,7 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
       <button class="tab" data-tab="submit" type="button">📨 Submission</button>
       <button class="tab" data-tab="services" type="button">💼 Services</button>
       <button class="tab" data-tab="traffic" type="button">🚗 Traffic</button>
+      <button class="tab" data-tab="verify" type="button">🔎 Verify</button>
     </div>
 
     <section id="tab-vault">
@@ -243,6 +244,34 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
         <div id="trVeh" style="margin-top:10px"></div>
       </div>
     </section>
+    <section id="tab-verify" hidden>
+      <div class="card">
+        <b>🔎 QCTO verification client - application pipeline (Route C)</b>
+        <ol class="help" style="margin:6px 0 0;padding-left:20px">
+          <li>Application e-mail to <b>verification@qcto.org.za</b> (draft in your pack: qcto-verification-pack.md,
+            finalised with your entity &amp; contact details).</li>
+          <li>QCTO issues the client application form + draft SLA to the SLA contact's e-mail.</li>
+          <li>Sign the SLA; deliver the <b>original</b> by hand / courier / post to QCTO offices - e-mailed copies rejected.</li>
+          <li>QCTO confirms receipt and issues verification-client credentials for <b>verification.qcto.org.za</b>
+            (the public Register link redirects to this client login - onboarding starts at the e-mail above).</li>
+          <li>Per request: capture the certificate's data on the portal + upload a copy certified &le;3 months &rarr;
+            outcome <b>Confirmed</b> / mismatch, e-mail notification, audit trail; fees invoiced monthly per SLA.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <b>Verification requests ledger</b>
+        <div class="grid" style="margin-top:8px">
+          <div><label class="lbl">Holder</label><input id="vHolder" placeholder="name on certificate"></div>
+          <div><label class="lbl">Trade</label><input id="vTrade" placeholder="e.g. Millwright"></div>
+          <div><label class="lbl">Certificate no.</label><input id="vCert" placeholder="12/47889"></div>
+          <div><label class="lbl">Tracking no.</label><input id="vTrack" placeholder="Q 17216576"></div>
+          <div><label class="lbl">Submitted</label><input id="vDate" type="date"></div>
+          <div><label class="lbl">Fee (R)</label><input id="vFee" type="number" placeholder="0"></div>
+        </div>
+        <p style="margin:10px 0 0"><button class="btn pri" id="vAdd" type="button">Log verification request</button></p>
+        <div id="vList" style="margin-top:10px"></div>
+      </div>
+    </section>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -280,8 +309,8 @@ document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click', function(){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
-    ['vault','certs','orders','submit','services','traffic'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
-    if (t.getAttribute('data-tab') === 'traffic') loadTraffic();
+    ['vault','certs','orders','submit','services','traffic','verify'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
+    if (t.getAttribute('data-tab') === 'traffic' || t.getAttribute('data-tab') === 'verify') loadTraffic();
   });
 });
 
@@ -480,6 +509,7 @@ function renderTraffic(){
       '<button class="btn sm" data-tdisc="' + r.id + '" data-exp="' + esc(r.expires_on) + '" type="button">Disc +1y</button>' +
       '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
     : '<div class="help">No vehicles on record yet.</div>';
+  renderVerify();
   $('#trFees').querySelectorAll('[data-tpay]').forEach(function(b){
     b.addEventListener('click', function(){
       var id = b.getAttribute('data-tpay');
@@ -523,6 +553,36 @@ $('#trVAdd').addEventListener('click', function(){
     kind: 'vehicle', ref: $('#trVReg').value, descr: $('#trVMake').value + ' ' + $('#trVModel').value,
     receipt: $('#trVVin').value, amount: $('#trVTare').value, expires_on: $('#trVExp').value }) })
     .then(function(){ toast('Vehicle on record - ALV/ARC forms pre-filled from it.'); loadTraffic(); })
+    .catch(function(e){ toast(e.message, true); });
+});
+
+/* verification desk (QCTO client workflow) */
+function renderVerify(){
+  var el = $('#vList'); if (!el) return;
+  var vs = TR.rows.filter(function(r){ return r.kind === 'verify'; });
+  el.innerHTML = vs.length ? '<table><tr><th>Holder / trade</th><th>Cert no.</th><th>Tracking</th><th>Submitted</th><th>Fee</th><th>Outcome</th><th></th></tr>' +
+    vs.map(function(r){ return '<tr><td>' + esc(r.descr) + '</td><td><code>' + esc(r.ref) + '</code></td><td>' + esc(r.receipt) +
+      '</td><td>' + (r.paid_on || '-') + '</td><td>' + money(r.amount) + '</td>' +
+      '<td><span class="badge ' + (r.status === 'confirmed' ? 'ok' : r.status === 'mismatch' ? 'exp' : 'warn') + '">' + esc(r.status) + '</span></td>' +
+      '<td class="row">' + (r.status !== 'confirmed' ? '<button class="btn sm" data-vok="' + r.id + '" type="button">Confirmed</button>' : '') +
+      (r.status !== 'mismatch' ? '<button class="btn sm" data-vno="' + r.id + '" type="button">Mismatch</button>' : '') +
+      '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
+    : '<div class="help">No verification requests logged yet. Once QCTO onboards My AI Pro as a verification client, log every certificate you run through verification.qcto.org.za here.</div>';
+  el.querySelectorAll('[data-vok]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/traffic/' + b.getAttribute('data-vok'), { method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: 'confirmed' }) }).then(function(){ toast('Outcome recorded: Confirmed.'); loadTraffic(); }); }); });
+  el.querySelectorAll('[data-vno]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/traffic/' + b.getAttribute('data-vno'), { method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: 'mismatch' }) }).then(function(){ toast('Outcome recorded: mismatch - do not rely on that certificate.'); loadTraffic(); }); }); });
+}
+$('#vAdd').addEventListener('click', function(){
+  api('/api/reg/traffic', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    kind: 'verify', descr: ($('#vHolder').value || 'holder') + ' - ' + ($('#vTrade').value || 'trade'),
+    ref: $('#vCert').value, receipt: $('#vTrack').value, paid_on: $('#vDate').value, amount: $('#vFee').value,
+    status: 'pending' }) })
+    .then(function(){ toast('Verification request logged as pending.'); loadTraffic(); })
     .catch(function(e){ toast(e.message, true); });
 });
 

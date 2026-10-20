@@ -949,11 +949,11 @@ Official status of any licence is only what eNaTIS states.</div>
     async def traffic_add(request: Request):
         require_admin(request)
         d = await request.json()
-        kind = d.get("kind") if d.get("kind") in ("fee", "licence", "vehicle") else "fee"
+        kind = d.get("kind") if d.get("kind") in ("fee", "licence", "vehicle", "verify") else "fee"
         _run("INSERT INTO traffic(kind,ref,descr,amount,status,paid_on,receipt,expires_on,created)"
              " VALUES (?,?,?,?, ?, ?,?, ?, ?)",
              (kind, str(d.get("ref") or "")[:60], str(d.get("descr") or "")[:200], float(d.get("amount") or 0),
-              "unpaid" if kind == "fee" else "n/a",
+              str(d.get("status") or ("unpaid" if kind == "fee" else "n/a"))[:20],
               str(d.get("paid_on") or "")[:20], str(d.get("receipt") or "")[:80], str(d.get("expires_on") or "")[:20],
               time.time()), force_backup=True)
         return {"ok": True}
