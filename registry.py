@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS submissions(
   id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, channel TEXT, target TEXT,
   status TEXT, log TEXT, created REAL, sent_at REAL);
+CREATE TABLE IF NOT EXISTS traffic(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, ref TEXT, descr TEXT,
+  amount REAL DEFAULT 0, status TEXT DEFAULT 'unpaid', paid_on TEXT DEFAULT '',
+  receipt TEXT DEFAULT '', expires_on TEXT DEFAULT '', created REAL);
 """
 
 # ---------------------------------------------------------------- statutory checklists
@@ -407,6 +411,68 @@ test date __________ &middot; examiner __________ &middot; result: pass / fail</
 <div class="note">Convenience reproduction pre-filled from the owner's registry profile &mdash; submit together with (or transcribed onto) the
 official form at your Driving Licence Testing Centre, or via the NaTIS Online booking at online.natis.gov.za.
 Bring: original ID, {photos} black-and-white ID photos, eye test certificate (&lt;3 months), booking fee.</div>
+</div></body></html>"""
+
+
+def _vehicle_form(request: Request, kind: str, v: dict) -> str:
+    """Pre-filled ALV (licensing/disc) or ARC (registration/RC1) application."""
+    s = {k: get_kv(k) for k in ("owner_name", "owner_id", "owner_address", "owner_phone", "owner_email")}
+    name = (s.get("owner_name") or "").strip()
+    forenames, _, surname = name.rpartition(" ")
+    if not surname:
+        surname, forenames = name, ""
+    dob, gender = _sa_id_bits(s.get("owner_id", ""))
+    sig = get_kv("signature")
+    sigimg = f'<img class="sig" src="{sig}" alt="signature">' if sig else ""
+    is_alv = kind == "ALV"
+    title = ("APPLICATION FOR LICENSING OF A MOTOR VEHICLE (FORM ALV)" if is_alv
+             else "APPLICATION FOR REGISTRATION OF A MOTOR VEHICLE (FORM ARC / RC1)")
+    lic = f"""<div class="frow"><div class="fbox"><label>Current licence disc expires</label><div class="val">{v.get('exp') or '____-____-______'}</div></div>
+<div class="fbox"><label>Period applied for</label><div class="val">12 months</div></div></div>""" if is_alv else \
+          """<div class="frow"><div class="fbox"><label>Registration number applied for (office allocates)</label><div class="val">____________________</div></div>
+<div class="fbox"><label>Title deed / ownership proof</label><div class="val">attached</div></div></div>"""
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>{kind} - pre-filled</title>
+<style>@page{{size:A4;margin:14mm}}body{{margin:0;background:#eef0f7;font-family:system-ui,sans-serif;color:#1c2033}}
+.sheet{{max-width:820px;margin:24px auto;background:#fff;border:1px solid #c9cde4;padding:44px 50px}}
+.h{{font:800 15px/1.4 system-ui;letter-spacing:.06em;text-transform:uppercase;text-align:center}}
+.sub{{font:12px/1.5 system-ui;color:#3c4160;text-align:center;margin:4px 0 22px}}
+.frow{{display:flex;gap:14px;margin-bottom:12px}} .fbox{{flex:1;border:1px solid #9aa0c0;padding:8px 12px}}
+label{{display:block;font:10px/1.3 system-ui;text-transform:uppercase;letter-spacing:.06em;color:#64698a}}
+.val{{font:14px/1.4 system-ui;margin-top:3px;min-height:18px}}
+.dec{{border:1px solid #9aa0c0;padding:12px 14px;font:12.5px/1.6 system-ui;margin:16px 0}}
+.sigrow{{display:flex;align-items:flex-end;gap:24px;margin-top:30px}}
+.sig{{height:64px;display:block}} .sline{{flex:1;max-width:280px;border-top:1.5px solid #1c2033;padding-top:5px;font:11.5px/1.4 system-ui;color:#3c4160}}
+.office{{border:1.5px dashed #9aa0c0;padding:12px 14px;font:11px/1.6 system-ui;color:#64698a;margin-top:26px}}
+.note{{font:10.5px/1.5 system-ui;color:#8a8fa8;margin-top:14px}}
+button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
+@media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0;border:none}}}}</style></head>
+<body><button onclick="window.print()">Print / save PDF</button>
+<div class="sheet">
+<div class="h">Republic of South Africa &middot; {title}</div>
+<div class="sub">National Road Traffic Act, 1996 (Act 93 of 1996) &middot; National Road Traffic Regulations, 2000 &middot; pre-filled by My AI Pro Registry</div>
+<div class="frow"><div class="fbox"><label>Title holder - surname</label><div class="val">{surname}</div></div>
+<div class="fbox"><label>First names</label><div class="val">{forenames}</div></div>
+<div class="fbox"><label>Identity number</label><div class="val">{s.get('owner_id','')}</div></div></div>
+<div class="frow"><div class="fbox"><label>Residential address</label><div class="val">{s.get('owner_address','')}</div></div>
+<div class="fbox"><label>Cellphone</label><div class="val">{s.get('owner_phone','')}</div></div></div>
+<div class="frow"><div class="fbox"><label>Registration number</label><div class="val">{v.get('reg') or '________________'}</div></div>
+<div class="fbox"><label>VIN / chassis number</label><div class="val">{v.get('vin') or '__________________'}</div></div></div>
+<div class="frow"><div class="fbox"><label>Make</label><div class="val">{v.get('make') or '__________'}</div></div>
+<div class="fbox"><label>Model</label><div class="val">{v.get('model') or '__________'}</div></div>
+<div class="fbox"><label>Year model</label><div class="val">{v.get('year') or '______'}</div></div>
+<div class="fbox"><label>Tare (kg)</label><div class="val">{v.get('tare') or '______'}</div></div></div>
+{lic}
+<div class="frow"><div class="fbox"><label>Place</label><div class="val">______________________</div></div>
+<div class="fbox"><label>Date</label><div class="val">____-____-______</div></div></div>
+<div class="dec">I declare that I am the title holder of the motor vehicle described above, that the particulars furnished are
+true and correct in every respect, and that the vehicle complies with the requirements of the National Road Traffic Act, 1996.</div>
+<div class="sigrow"><div>{sigimg}<div class="sline">Signature of title holder</div></div></div>
+<div class="office">OFFICE USE &mdash; NaTIS: register entry / RC1 no. __________ &middot; licence fee received R______ &middot; receipt no. __________ &middot;
+disc / registration issued __________ &middot; officer __________</div>
+<div class="note">Convenience reproduction pre-filled from the owner's registry profile &mdash; submit with (or transcribe onto) the
+official form at your DLTC / registering authority, or via online.natis.gov.za where the province supports it.
+Bring: original ID, proof of ownership / sale invoice, proof of address, and the applicable fee (tariff based on tare mass).</div>
 </div></body></html>"""
 
 
@@ -817,6 +883,61 @@ unauthenticated by design so that any institution's systems can call them direct
     @app.get("/traffic/dl1", response_class=HTMLResponse)
     def traffic_dl1(request: Request, code: str = "B", ll: str = "", lldate: str = ""):
         return HTMLResponse(_traffic_form(request, "DL1", code, ll, lldate))
+
+    @app.get("/traffic/alv", response_class=HTMLResponse)
+    def traffic_alv(request: Request, reg: str = "", vin: str = "", make: str = "", model: str = "",
+                    year: str = "", tare: str = "", exp: str = ""):
+        return HTMLResponse(_vehicle_form(request, "ALV", {"reg": reg, "vin": vin, "make": make,
+                                                           "model": model, "year": year, "tare": tare, "exp": exp}))
+
+    @app.get("/traffic/arc", response_class=HTMLResponse)
+    def traffic_arc(request: Request, reg: str = "", vin: str = "", make: str = "", model: str = "",
+                    year: str = "", tare: str = ""):
+        return HTMLResponse(_vehicle_form(request, "ARC", {"reg": reg, "vin": vin, "make": make,
+                                                           "model": model, "year": year, "tare": tare}))
+
+    @app.get("/api/reg/traffic")
+    def traffic_list(request: Request):
+        require_admin(request)
+        return {"rows": _rows("SELECT * FROM traffic ORDER BY kind, id")}
+
+    @app.post("/api/reg/traffic")
+    async def traffic_add(request: Request):
+        require_admin(request)
+        d = await request.json()
+        kind = d.get("kind") if d.get("kind") in ("fee", "licence", "vehicle") else "fee"
+        _run("INSERT INTO traffic(kind,ref,descr,amount,status,paid_on,receipt,expires_on,created)"
+             " VALUES (?,?,?,?, ?, ?,?, ?, ?)",
+             (kind, str(d.get("ref") or "")[:60], str(d.get("descr") or "")[:200], float(d.get("amount") or 0),
+              "unpaid" if kind == "fee" else "n/a",
+              str(d.get("paid_on") or "")[:20], str(d.get("receipt") or "")[:80], str(d.get("expires_on") or "")[:20],
+              time.time()), force_backup=True)
+        return {"ok": True}
+
+    @app.post("/api/reg/traffic/{tid}")
+    async def traffic_upd(request: Request, tid: int):
+        require_admin(request)
+        row = _rows("SELECT * FROM traffic WHERE id=?", (tid,))
+        if not row:
+            raise HTTPException(404, "Not found.")
+        r, d = row[0], await request.json()
+        status, paid_on = r["status"], r["paid_on"]
+        if d.get("mark_paid"):
+            status, paid_on = "paid", time.strftime("%Y-%m-%d")
+        if d.get("status"):
+            status = str(d["status"])[:20]
+        _run("UPDATE traffic SET ref=?,descr=?,amount=?,status=?,paid_on=?,receipt=?,expires_on=? WHERE id=?",
+             (str(d.get("ref", r["ref"]))[:60], str(d.get("descr", r["descr"]))[:200],
+              float(d.get("amount", r["amount"])), status, paid_on,
+              str(d.get("receipt", r["receipt"]))[:80], str(d.get("expires_on", r["expires_on"]))[:20], tid),
+             force_backup=True)
+        return {"ok": True}
+
+    @app.delete("/api/reg/traffic/{tid}")
+    def traffic_del(request: Request, tid: int):
+        require_admin(request)
+        _run("DELETE FROM traffic WHERE id=?", (tid,), force_backup=True)
+        return {"ok": True}
 
     @app.get("/annexure5/{iid}", response_class=HTMLResponse)
     def annexure5_page(request: Request, iid: int):

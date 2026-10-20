@@ -207,6 +207,41 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
           <a href="https://www.gov.za/services/driving-licence/apply-learners-licence" target="_blank">gov.za learner's guide</a>
         </div>
       </div>
+      <div class="card">
+        <b>💳 Fees &amp; payments ledger</b>
+        <div class="help" style="margin:6px 0 8px">Your proof trail: mark a fee <b>paid</b> only after you have actually paid it at the
+        DLTC or portal, and keep the receipt no. Official "paid / issued" status exists only inside eNaTIS after the real
+        transaction — this ledger records your side of it.</div>
+        <p style="margin:0 0 8px"><button class="btn" id="trSched" type="button">+ Add standard 2026 fee schedule</button></p>
+        <div id="trFees"></div>
+      </div>
+      <div class="card">
+        <b>🪪 Licences on record</b>
+        <div class="grid" style="margin-top:8px">
+          <div><label class="lbl">Licence</label><select id="trLType">
+            <option>Learner's licence</option><option>Driving licence</option><option>PrDP</option></select></div>
+          <div><label class="lbl">Code</label><input id="trLCode" value="B"></div>
+          <div><label class="lbl">Number</label><input id="trLRef" placeholder="licence no."></div>
+          <div><label class="lbl">Issued</label><input id="trLIssued" type="date"></div>
+          <div><label class="lbl">Expires / renewal</label><input id="trLExp" type="date"></div>
+        </div>
+        <p style="margin:10px 0 0"><button class="btn pri" id="trLAdd" type="button">Record licence</button></p>
+        <div id="trLic" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <b>🚙 Vehicles &amp; registration</b>
+        <div class="grid" style="margin-top:8px">
+          <div><label class="lbl">Registration no.</label><input id="trVReg" placeholder="CA 123-456"></div>
+          <div><label class="lbl">Make</label><input id="trVMake" placeholder="Toyota"></div>
+          <div><label class="lbl">Model</label><input id="trVModel" placeholder="Corolla 1.8"></div>
+          <div><label class="lbl">VIN / chassis</label><input id="trVVin" placeholder="AAVZZ..."></div>
+          <div><label class="lbl">Year</label><input id="trVYear" placeholder="2021"></div>
+          <div><label class="lbl">Tare (kg)</label><input id="trVTare" type="number" placeholder="1250"></div>
+          <div><label class="lbl">Disc expires</label><input id="trVExp" type="date"></div>
+        </div>
+        <p style="margin:10px 0 0"><button class="btn pri" id="trVAdd" type="button">Add vehicle</button></p>
+        <div id="trVeh" style="margin-top:10px"></div>
+      </div>
     </section>
   </div>
 </main>
@@ -246,6 +281,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
     t.classList.add('on');
     ['vault','certs','orders','submit','services','traffic'].forEach(function(k){ $('#tab-' + k).hidden = k !== t.getAttribute('data-tab'); });
+    if (t.getAttribute('data-tab') === 'traffic') loadTraffic();
   });
 });
 
@@ -407,6 +443,87 @@ $('#trLL1').addEventListener('click', function(){
 $('#trDL1').addEventListener('click', function(){
   window.open('/traffic/dl1?code=' + encodeURIComponent(trCodeVal()) +
     '&ll=' + encodeURIComponent($('#trLl').value) + '&lldate=' + encodeURIComponent($('#trLlDate').value), '_blank'); });
+
+/* traffic ledger / licences / vehicles */
+var TR = { rows: [] };
+function loadTraffic(){
+  api('/api/reg/traffic').then(function(d){ TR.rows = d.rows || []; renderTraffic(); })
+    .catch(function(e){ toast(e.message, true); });
+}
+function soon(d){ if (!d) return false; var t = new Date(d + 'T00:00:00'), n = new Date();
+  n.setDate(n.getDate() + 60); return t <= n; }
+function renderTraffic(){
+  var fees = TR.rows.filter(function(r){ return r.kind === 'fee'; });
+  $('#trFees').innerHTML = fees.length ? '<table><tr><th>Fee</th><th>Amount</th><th>Status</th><th>Paid on</th><th>Receipt no.</th><th></th></tr>' +
+    fees.map(function(r){ return '<tr><td>' + esc(r.descr) + '</td><td>' + money(r.amount) + '</td>' +
+      '<td><span class="badge ' + (r.status === 'paid' ? 'ok' : 'warn') + '">' + esc(r.status) + '</span></td>' +
+      '<td>' + (r.paid_on || '-') + '</td><td><input data-rcpt="' + r.id + '" value="' + esc(r.receipt) + '" placeholder="receipt" style="width:100px"></td>' +
+      '<td class="row">' + (r.status !== 'paid' ? '<button class="btn sm" data-tpay="' + r.id + '" type="button">Mark paid</button>' : '') +
+      '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
+    : '<div class="help">No fees recorded yet.</div>';
+  var lic = TR.rows.filter(function(r){ return r.kind === 'licence'; });
+  $('#trLic').innerHTML = lic.length ? '<table><tr><th>Licence</th><th>Number</th><th>Issued</th><th>Renewal</th><th></th></tr>' +
+    lic.map(function(r){ return '<tr><td>' + esc(r.descr) + '</td><td><code>' + esc(r.ref) + '</code></td><td>' + (r.paid_on || '-') +
+      '</td><td' + (soon(r.expires_on) ? ' style="color:#c0392b;font-weight:700"' : '') + '>' + (r.expires_on || '-') + '</td>' +
+      '<td class="row"><button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
+    : '<div class="help">No licences recorded yet - record them here once the DLTC issues them.</div>';
+  var veh = TR.rows.filter(function(r){ return r.kind === 'vehicle'; });
+  $('#trVeh').innerHTML = veh.length ? '<table><tr><th>Reg</th><th>Vehicle</th><th>VIN</th><th>Tare</th><th>Disc expires</th><th></th></tr>' +
+    veh.map(function(r){ return '<tr><td><code>' + esc(r.ref) + '</code></td><td>' + esc(r.descr) + '</td><td>' + esc(r.receipt) +
+      '</td><td>' + (r.amount || '-') + ' kg</td><td' + (soon(r.expires_on) ? ' style="color:#c0392b;font-weight:700"' : '') + '>' +
+      (r.expires_on || '-') + '</td><td class="row">' +
+      '<a class="btn sm" target="_blank" href="/traffic/alv?reg=' + encodeURIComponent(r.ref) + '&vin=' + encodeURIComponent(r.receipt) +
+        '&make=' + encodeURIComponent(r.descr) + '&tare=' + encodeURIComponent(r.amount) + '&exp=' + encodeURIComponent(r.expires_on) + '">ALV</a>' +
+      '<a class="btn sm" target="_blank" href="/traffic/arc?reg=' + encodeURIComponent(r.ref) + '&vin=' + encodeURIComponent(r.receipt) +
+        '&make=' + encodeURIComponent(r.descr) + '&tare=' + encodeURIComponent(r.amount) + '">ARC</a>' +
+      '<button class="btn sm" data-tdisc="' + r.id + '" data-exp="' + esc(r.expires_on) + '" type="button">Disc +1y</button>' +
+      '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
+    : '<div class="help">No vehicles on record yet.</div>';
+  $('#trFees').querySelectorAll('[data-tpay]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.getAttribute('data-tpay');
+      var rc = document.querySelector('[data-rcpt="' + id + '"]');
+      api('/api/reg/traffic/' + id, { method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ mark_paid: true, receipt: rc ? rc.value : '' }) })
+        .then(function(){ toast('Recorded as paid today - keep the official receipt.'); loadTraffic(); });
+    }); });
+  $('#trVeh').querySelectorAll('[data-tdisc]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var e = b.getAttribute('data-exp') || new Date().toISOString().slice(0, 10);
+      var d = new Date(e + 'T00:00:00'); d.setFullYear(d.getFullYear() + 1);
+      api('/api/reg/traffic/' + b.getAttribute('data-tdisc'), { method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ expires_on: d.toISOString().slice(0, 10) }) })
+        .then(function(){ toast('Disc renewal date rolled +1 year (record your NaTIS payment).'); loadTraffic(); });
+    }); });
+  document.querySelectorAll('[data-tdel]').forEach(function(b){
+    b.addEventListener('click', function(){
+      api('/api/reg/traffic/' + b.getAttribute('data-tdel'), { method: 'DELETE' })
+        .then(function(){ toast('Removed.'); loadTraffic(); });
+    }); });
+}
+$('#trSched').addEventListener('click', function(){
+  var sched = [['Learner\'s test booking (LL)', 108], ['Learner\'s card issue on pass', 252],
+    ['Driving test booking (DL)', 250], ['Driving licence card issue', 250],
+    ['Temporary licence (if needed)', 100]];
+  var p = Promise.resolve();
+  sched.forEach(function(s){ p = p.then(function(){
+    return api('/api/reg/traffic', { method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ kind: 'fee', descr: s[0], amount: s[1] }) }); }); });
+  p.then(function(){ toast('Standard schedule added as UNPAID - mark each paid when you actually pay.'); loadTraffic(); });
+});
+$('#trLAdd').addEventListener('click', function(){
+  api('/api/reg/traffic', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    kind: 'licence', descr: $('#trLType').value + ' code ' + $('#trLCode').value,
+    ref: $('#trLRef').value, paid_on: $('#trLIssued').value, expires_on: $('#trLExp').value }) })
+    .then(function(){ toast('Licence recorded.'); loadTraffic(); }).catch(function(e){ toast(e.message, true); });
+});
+$('#trVAdd').addEventListener('click', function(){
+  api('/api/reg/traffic', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+    kind: 'vehicle', ref: $('#trVReg').value, descr: $('#trVMake').value + ' ' + $('#trVModel').value,
+    receipt: $('#trVVin').value, amount: $('#trVTare').value, expires_on: $('#trVExp').value }) })
+    .then(function(){ toast('Vehicle on record - ALV/ARC forms pre-filled from it.'); loadTraffic(); })
+    .catch(function(e){ toast(e.message, true); });
+});
 
 /* certs */
 $('#cIssue').addEventListener('click', function(){
