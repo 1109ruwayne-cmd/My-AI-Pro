@@ -552,6 +552,10 @@ details.adv[open] summary{margin-bottom:14px}
         <div class="help" id="shLog" style="max-height:150px;overflow:auto;white-space:pre-wrap;margin-top:6px"></div>
       </div>
       <div class="field">
+        <label class="lbl">🧩 Modules &amp; key slots</label>
+        <div class="help" id="modList" style="white-space:pre-wrap">Loading…</div>
+      </div>
+      <div class="field">
         <label class="lbl" for="cfgName">Your AI's name</label>
         <input class="input" id="cfgName" maxlength="60" placeholder="My AI">
       </div>
@@ -2727,6 +2731,13 @@ details.adv[open] summary{margin-bottom:14px}
   function shLoad(){
     fetch('/api/selfheal', { headers: shAdminHeaders() }).then(function(r){ return r.json(); })
       .then(shRender).catch(function(e){ $('#shStatus').textContent = 'Self-repair status unavailable: ' + e; });
+    fetch('/api/modules', { headers: shAdminHeaders() }).then(function(r){ return r.json(); })
+      .then(function(d){
+        $('#modList').textContent =
+          d.modules.map(function(m){ return '• ' + m.name + ' — ' + m.status; }).join('\n') +
+          '\n—— key slots (values never leave the server) ——\n' +
+          d.keys.map(function(k){ return (k.present ? '🔑 ' : '◻️ ') + k.name + ' — ' + k.where; }).join('\n');
+      }).catch(function(e){ $('#modList').textContent = 'Module inventory unavailable: ' + e; });
   }
   $('#shRun').addEventListener('click', function(){
     $('#shStatus').textContent = 'Running diagnostics…';

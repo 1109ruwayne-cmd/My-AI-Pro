@@ -96,6 +96,7 @@ SOURCE_SYNC = [
     ("08-source-security.md", "ratelimit.py", "the rate limiting and brute-force protection module"),
     ("09-source-selfheal.md", "selfheal.py", "the self-repair engine"),
     ("10-source-registry.md", "registry.py", "the certification registry module"),
+    ("11-source-services.md", "static/services.html", "the public order desk frontend"),
 ]
 SOURCE_SYNC_INFRA = ("07-source-infrastructure.md",
                      [("Dockerfile", "the Docker image it runs in"),
@@ -807,6 +808,41 @@ def selfheal_run(request: Request):
     require_admin(request)
     report = selfheal.run_diagnostics(kb=kb, kb_dir=KNOWLEDGE_DIR, deep=True)
     return {"report": report, "heals": selfheal.heals(60)}
+
+
+@app.get("/api/modules")
+def modules_status(request: Request):
+    """Owner-gated inventory: every engine in the body + every key slot and its state.
+    Values are never returned - only presence - because secrets stay in server env."""
+    require_admin(request)
+    import registry as reg
+    smtp_on = bool(reg.get_kv("smtp_host") and reg.get_kv("smtp_user") and reg.get_kv("smtp_pass"))
+    cfg = load_config()
+    key_slots = [
+        {"name": "AI brain key (Gemini / provider)", "present": bool(SERVER_API_KEY),
+         "where": "server env AI_API_KEY"},
+        {"name": "Owner password", "present": bool(ADMIN_PASSWORD), "where": "server env ADMIN_PASSWORD"},
+        {"name": "Turso mirror", "present": bool(os.environ.get("TURSO_DB_URL", "").strip()),
+         "where": "server env TURSO_DB_URL/TOKEN"},
+        {"name": "Registry SMTP sender", "present": smtp_on, "where": "registry settings (masked)"},
+        {"name": "Render deploy token", "present": False,
+         "where": "held outside the app by design (owner ops)"},
+        {"name": "GitHub PAT", "present": False,
+         "where": "EXPIRED - owner to re-mint; never stored in app code"},
+    ]
+    mods = [
+        {"name": "Chat engine + fallback chain", "status": f"{len(PROVIDERS)} providers"},
+        {"name": "Knowledge base", "status": f"{len(kb.files)} file(s) incl. full self-source mirrors"},
+        {"name": "Agent Skills", "status": f"{len(skills.tool_defs())} keyless skills"},
+        {"name": "Connector engines", "status": "web search, pages, weather, fx, dictionary, wiki"},
+        {"name": "Registry desk", "status": "vault, certs, orders, submissions, traffic, verify"},
+        {"name": "Billing & paywall", "status": "EFT desk, provisional access, owner lifetime"},
+        {"name": "Self-repair (AutoMedic)", "status": f"watchdog {selfheal._interval}s, {len(selfheal.TRACKED)} tracked files"},
+        {"name": "Security", "status": "rate limiting, brute-force guard, admin gating, CORS-scoped APIs"},
+        {"name": "Outbound mail", "status": "SMTP pipeline + logged sendmail" if smtp_on else "SMTP not configured"},
+        {"name": "I FIX AI", "status": "self-diagnosis assistant module"},
+    ]
+    return {"modules": mods, "keys": key_slots, "provider_selected": cfg.get("provider", "")}
 
 
 @app.get("/owner-activate", response_class=HTMLResponse)
