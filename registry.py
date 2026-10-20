@@ -414,7 +414,7 @@ h1{{font-size:34px;margin:26px 0 6px;letter-spacing:.02em}} .holder{{font-size:2
 .sig div{{flex:1;border-top:1.5px solid #1c2033;padding-top:6px}}
 .signrow{{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-top:38px}}
 .sigblock{{flex:1;text-align:left}} .sigline{{font:12.5px/1.4 system-ui;color:#3c4160;border-top:1.5px solid #1c2033;padding-top:6px;max-width:320px}}
-.sigimg{{height:64px;display:block;margin-bottom:6px}}
+.sigimg{{height:88px;display:block;margin-bottom:6px}}
 .script{{font-family:'Segoe Script','Brush Script MT','Comic Sans MS',cursive;font-size:34px;color:#14265c;transform:rotate(-3deg);margin:0 0 6px}}
 .stampblock{{flex:none}} .stamp{{width:168px;height:168px;opacity:.92;transform:rotate(-8deg)}}
 button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
