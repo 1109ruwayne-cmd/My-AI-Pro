@@ -9,6 +9,7 @@ desk paid by EFT into the owner's bank account.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import os
 import re
@@ -24,12 +25,21 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 import httpx
+import qrcode
+from qrcode.image.svg import SvgPathImage
 from fastapi import File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 DB_PATH = Path(os.environ.get("REGISTRY_DB", str(Path(__file__).parent / "registry.db")))
 _lock = threading.Lock()
 MAX_DOC = 15 * 1024 * 1024
+_CORS = {"Access-Control-Allow-Origin": "*"}
+
+
+def _fingerprint(cert: dict) -> str:
+    """SHA-256 integrity fingerprint over the credential's immutable fields."""
+    return hashlib.sha256("|".join(str(cert.get(k) or "") for k in
+                                   ("code", "holder", "ctype", "issued_on", "expires_on")).encode()).hexdigest()
 
 TURSO_DB_URL = os.environ.get("TURSO_DB_URL", "").strip()
 if TURSO_DB_URL.startswith("libsql://"):
@@ -419,6 +429,8 @@ h1{{font-size:34px;margin:26px 0 6px;letter-spacing:.02em}} .holder{{font-size:2
 .sigimg{{height:88px;display:block;margin-bottom:6px}}
 .script{{font-family:'Segoe Script','Brush Script MT','Comic Sans MS',cursive;font-size:34px;color:#14265c;transform:rotate(-3deg);margin:0 0 6px}}
 .stampblock{{flex:none}} .stamp{{width:168px;height:168px;opacity:.92;transform:rotate(-8deg)}}
+.qrblock{{flex:none;text-align:center}} .qr{{width:100px;height:100px;display:block;margin:0 auto}} .qrcap{{font:10px/1.4 system-ui;color:#64698a;margin-top:4px}}
+.fp{{font:10.5px/1.5 ui-monospace,monospace;color:#8a8fa8;margin-top:20px;word-break:break-all}}
 button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
 @media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0;border-width:8px}}}}</style></head>
 <body><button onclick="window.print()">Print / save PDF</button>
@@ -431,8 +443,10 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 <span>{('Valid until ' + cert['expires_on']) if cert['expires_on'] else 'No expiry date'}</span></div>
 <div class="signrow">
   <div class="sigblock">{signature_html}<div class="sigline">Ruwayne Campher - issuer &amp; registered verifier</div></div>
+  <div class="qrblock"><img class="qr" src="/cert/{cert['code']}/qr.svg" alt="verification QR code"><div class="qrcap">Scan for live verification</div></div>
   <div class="stampblock">{stamp_svg}</div>
 </div>
+<div class="fp">Credential fingerprint (SHA-256): {_fingerprint(cert)} &middot; machine verification: GET /api/reg/verify/{cert['code']} &middot; Open Badges 3.0: /api/reg/badge/{cert['code']}</div>
 <div class="sig"><div class="sigcol"><div class="sigslot">{signature_html}</div><div class="sigruled">Signature as above</div></div><div class="sigcol"><div class="sigslot"></div><div class="sigruled">Verify at /verify/{cert['code']}</div></div></div>
 </div></body></html>""")
 
@@ -474,13 +488,166 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
                 "note": "Marked as paid - the owner is confirming. Work starts immediately and your order stays active while it is verified."}
 
     @app.get("/api/reg/verify/{code}")
-    def pub_verify(code: str):
+    def pub_verify(code: str, request: Request):
+        base = str(request.base_url).rstrip("/")
         c = _rows("SELECT code,holder,ctype,issued_on,expires_on,voided FROM certs WHERE code=?", (code.upper(),))
         if not c:
-            return {"valid": False, "state": "not-found"}
+            return JSONResponse({"valid": False, "state": "not-found"}, headers=_CORS)
         c = c[0]
-        return {"valid": not c["voided"], "state": "void" if c["voided"] else "valid",
-                "holder": c["holder"], "type": c["ctype"], "issued": c["issued_on"], "expires": c["expires_on"]}
+        return JSONResponse({"valid": not c["voided"], "state": "void" if c["voided"] else "valid",
+                "holder": c["holder"], "type": c["ctype"], "issued": c["issued_on"], "expires": c["expires_on"],
+                "fingerprint": _fingerprint(c),
+                "issuer": base + "/api/reg/issuer",
+                "badge": base + "/api/reg/badge/" + c["code"],
+                "qr": base + "/cert/" + c["code"] + "/qr.svg",
+                "acceptance_letter": base + "/cert/" + c["code"] + "/letter",
+                "human_check": base + "/verify/" + c["code"]}, headers=_CORS)
+
+    @app.get("/api/reg/issuer")
+    def pub_issuer(request: Request):
+        base = str(request.base_url).rstrip("/")
+        return JSONResponse({"@context": "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json",
+            "id": base + "/api/reg/issuer", "type": ["Profile"],
+            "name": "Ruwayne Campher - My AI Pro Registry",
+            "url": base + "/registry",
+            "address": "Republic of South Africa",
+            "description": ("Private certification and verification register of Ruwayne Campher. Every credential it issues is "
+                            "publicly verifiable by humans, by machine (open JSON API, CORS-enabled) and as an Open Badges 3.0 "
+                            "credential carrying a SHA-256 integrity fingerprint."),
+            "verification": {"human": base + "/verify/", "api": base + "/api/reg/verify/",
+                             "badge": base + "/api/reg/badge/", "trust_policy": base + "/trust"}}, headers=_CORS)
+
+    @app.get("/api/reg/badge/{code}")
+    def pub_badge(code: str, request: Request):
+        base = str(request.base_url).rstrip("/")
+        c = _rows("SELECT code,holder,ctype,body,issued_on,expires_on,voided FROM certs WHERE code=?", (code.upper(),))
+        if not c:
+            return JSONResponse({"valid": False, "state": "not-found"}, status_code=404, headers=_CORS)
+        cert = c[0]
+        if cert["voided"]:
+            return JSONResponse({"valid": False, "state": "void"}, status_code=410, headers=_CORS)
+        cred = {"@context": ["https://www.w3.org/ns/credentials/v2",
+                             "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json"],
+                "id": base + "/api/reg/badge/" + cert["code"],
+                "type": ["VerifiableCredential", "OpenBadgeCredential"],
+                "name": cert["ctype"],
+                "issuer": {"id": base + "/api/reg/issuer", "type": ["Profile"],
+                           "name": "Ruwayne Campher - My AI Pro Registry"},
+                "validFrom": (cert["issued_on"] or "2026-01-01") + "T00:00:00Z",
+                "credentialSubject": {"type": ["AchievementSubject"], "name": cert["holder"],
+                    "achievement": {"id": base + "/api/reg/badge/" + cert["code"], "type": ["Achievement"],
+                        "name": cert["ctype"], "description": cert["body"] or "",
+                        "criteria": {"narrative": "Live verification: " + base + "/verify/" + cert["code"] +
+                                     " (human) or " + base + "/api/reg/verify/" + cert["code"] + " (machine)."}}}}
+        if cert["expires_on"]:
+            cred["expirationDate"] = cert["expires_on"] + "T23:59:59Z"
+        cred["proof"] = {"type": "Sha256DigestProof", "proofPurpose": "assertionMethod",
+                         "created": (cert["issued_on"] or "") + "T00:00:00Z",
+                         "digestFields": ["code", "holder", "ctype", "issued_on", "expires_on"],
+                         "digest": _fingerprint(cert)}
+        return JSONResponse(cred, headers=_CORS)
+
+    @app.get("/cert/{code}/qr.svg")
+    def cert_qr(code: str, request: Request):
+        c = _rows("SELECT code,voided FROM certs WHERE code=?", (code.upper(),))
+        if not c:
+            raise HTTPException(404, "Certificate not found.")
+        base = str(request.base_url).rstrip("/")
+        img = qrcode.make(base + "/verify/" + c[0]["code"], image_factory=SvgPathImage, box_size=6, border=2)
+        buf = io.BytesIO(); img.save(buf)
+        return Response(content=buf.getvalue(), media_type="image/svg+xml",
+                        headers={"Cache-Control": "public, max-age=86400", **_CORS})
+
+    @app.get("/cert/{code}/letter", response_class=HTMLResponse)
+    def cert_letter(code: str, request: Request):
+        c = _rows("SELECT * FROM certs WHERE code=?", (code.upper(),))
+        if not c or c[0]["voided"]:
+            raise HTTPException(404, "Certificate not found or void.")
+        cert = c[0]; base = str(request.base_url).rstrip("/")
+        sig = get_kv("signature")
+        sigimg = f'<img class="sigimg" src="{sig}" alt="signature">' if sig else '<div class="script">Ruwayne Campher</div>'
+        fp = _fingerprint(cert)
+        return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Verification &amp; Acceptance Letter {cert['code']}</title>
+<style>@page{{size:A4;margin:18mm}}body{{margin:0;background:#eef0f7;font-family:Georgia,serif;color:#1c2033}}
+.sheet{{max-width:760px;margin:24px auto;background:#fff;border:1px solid #c9cde4;padding:52px 58px;line-height:1.65}}
+.head{{font:700 12px/1.4 system-ui;letter-spacing:.26em;text-transform:uppercase;color:#5b5bd6}}
+h1{{font-size:22px;margin:14px 0 4px}} .sub{{font-size:13px;color:#64698a;margin:0 0 26px}}
+p{{font-size:14px;margin:0 0 14px}} .box{{border:1px solid #c9cde4;background:#f7f8fd;padding:14px 18px;font:12.5px/1.7 ui-monospace,monospace;margin:0 0 16px;word-break:break-all}}
+.ch{{font:700 12px system-ui;text-transform:uppercase;letter-spacing:.08em;color:#1f3f8f;margin:22px 0 6px}}
+.sigrow{{margin-top:44px;display:flex;align-items:flex-end;gap:26px}}
+.sigimg{{height:74px;display:block}} .script{{font-family:'Segoe Script',cursive;font-size:28px;color:#14265c}}
+.sigline{{border-top:1.5px solid #1c2033;padding-top:6px;font:12.5px/1.4 system-ui;color:#3c4160;flex:1;max-width:300px}}
+.qr{{width:104px;height:104px}} .qrcap{{font:10px system-ui;color:#64698a;text-align:center;margin-top:4px}}
+button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 16px;border-radius:10px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
+@media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0;border:none}}}}</style></head>
+<body><button onclick="window.print()">Print / save PDF</button>
+<div class="sheet">
+<div class="head">Ruwayne Campher &middot; My AI Pro Registry &middot; Republic of South Africa</div>
+<h1>Letter of Verification &amp; Direct Acceptance</h1>
+<p class="sub">Certificate {cert['code']} &middot; issued {cert['issued_on'] or '-'}{(' &middot; valid until ' + cert['expires_on']) if cert['expires_on'] else ''}</p>
+<p>To the admissions office, human-resources department, licensing authority or other verifying body:</p>
+<p><b>{cert['holder']}</b> holds the credential <b>{cert['ctype']}</b> issued and certified by Ruwayne Campher, issuer and registered
+verifier of record. {cert['body'] or ''}</p>
+<p>This credential is offered for <b>direct acceptance</b>. Its authenticity can be confirmed instantly, without correspondence,
+through any of the following channels, each of which answers from the register of record in real time:</p>
+<div class="ch">1 &middot; Machine verification (open JSON API, CORS-enabled)</div>
+<div class="box">GET {base}/api/reg/verify/{cert['code']}</div>
+<div class="ch">2 &middot; Open Badges 3.0 / Verifiable Credential</div>
+<div class="box">GET {base}/api/reg/badge/{cert['code']}<br>issuer profile: {base}/api/reg/issuer</div>
+<div class="ch">3 &middot; Human verification page &amp; QR code</div>
+<div class="box">{base}/verify/{cert['code']}</div>
+<div class="ch">Integrity fingerprint (SHA-256 of code, holder, type, issue &amp; expiry)</div>
+<div class="box">{fp}</div>
+<p>A response of <b>"valid": true</b> (or a page marked VERIFIED) confirms the credential as genuine and unaltered; the
+fingerprint above must match the API response. Trust policy, issuer identity and acceptance procedure: {base}/trust.</p>
+<p>Certified correct on {cert['issued_on'] or '-'}.</p>
+<div class="sigrow"><div>{sigimg}<div class="sigline">Ruwayne Campher - issuer &amp; registered verifier</div></div>
+<div><img class="qr" src="{base}/cert/{cert['code']}/qr.svg" alt="verify QR"><div class="qrcap">scan = live verification</div></div></div>
+</div></body></html>""")
+
+    @app.get("/trust", response_class=HTMLResponse)
+    def trust_page(request: Request):
+        base = str(request.base_url).rstrip("/")
+        return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Trust &amp; Acceptance Policy - My AI Pro Registry</title>
+<style>body{{margin:0;background:#0f1222;color:#e8eaf6;font-family:system-ui,sans-serif;line-height:1.7}}
+.wrap{{max-width:860px;margin:0 auto;padding:56px 28px}} h1{{font-size:30px;margin:0 0 6px}} h2{{font-size:17px;color:#9aa4ff;margin:34px 0 8px}}
+.k{{color:#8b93b8;font-size:13px}} code,pre{{background:#181c33;border:1px solid #2a2f52;border-radius:8px;padding:2px 6px;font-size:12.5px}}
+pre{{padding:12px 14px;overflow:auto}} li{{margin:6px 0}} a{{color:#9aa4ff}}</style></head><body><div class="wrap">
+<h1>Trust &amp; Acceptance Policy</h1>
+<div class="k">My AI Pro Registry &middot; Ruwayne Campher &middot; Republic of South Africa &middot; &copy; 2026</div>
+<h2>1 &middot; Issuer</h2>
+<p>Credentials are issued by <b>Ruwayne Campher</b>, owner and registered verifier of this private register
+(<a href="{base}/registry">console</a>, owner-gated). Each credential carries the issuer's handwritten signature and the
+register's verification seal, and is recorded with issue date, scope and expiry.</p>
+<h2>2 &middot; Direct acceptance - how to verify any credential instantly</h2>
+<ul>
+<li><b>Human:</b> <code>{base}/verify/CODE</code> - VERIFIED / VOID status page.</li>
+<li><b>Machine:</b> <code>GET {base}/api/reg/verify/CODE</code> - open JSON, CORS <code>*</code>, no key required:
+<pre>curl {base}/api/reg/verify/RC-2026-0000</pre></li>
+<li><b>Standards:</b> <code>GET {base}/api/reg/badge/CODE</code> - Open Badges 3.0 / W3C Verifiable Credential JSON-LD with
+SHA-256 integrity proof; issuer profile at <code>{base}/api/reg/issuer</code>.</li>
+<li><b>Print:</b> every certificate page and its Letter of Verification &amp; Direct Acceptance
+(<code>{base}/cert/CODE/letter</code>) carry a QR code resolving to the live human check.</li>
+</ul>
+<h2>3 &middot; Integrity</h2>
+<p>Each credential's fingerprint is SHA-256 over <code>code|holder|type|issued|expires</code>. A credential whose API
+fingerprint differs from the printed one must be treated as altered. Voided credentials answer <code>"valid": false</code>
+everywhere, instantly and permanently.</p>
+<h2>4 &middot; Privacy (POPIA)</h2>
+<p>Only the holder's name, credential type, dates and code are published - the minimum necessary for verification.
+Third-party verification of another person's record elsewhere (e.g. SAQA NLRD) is performed only with that person's
+written consent, retained with the vault item.</p>
+<h2>5 &middot; Statutory recognition pathway</h2>
+<p>This register is a private certification instrument. Where a credential falls under a statutory regime
+(DoEL Registered Person, CIPC, SAQA NQF), the register additionally prepares and transmits the statutory application
+pack (Annexure 5, CoR forms, SAQA verification requests) through the official channels; recognition by those bodies
+follows their own application process, tracked in the owner console.</p>
+<h2>6 &middot; Contact &amp; abuse</h2>
+<p>Verification disputes: quote the certificate code and fingerprint via the owner console. Uptime: public endpoints are
+unauthenticated by design so that any institution's systems can call them directly.</p>
+</div></body></html>""")
 
     # ---------------- owner API
     @app.get("/api/reg/overview")

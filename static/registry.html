@@ -364,6 +364,8 @@ function renderCerts(){
     OV.certs.map(function(c){ return '<tr><td><code>' + esc(c.code) + '</code></td><td>' + esc(c.holder) + '</td><td>' + esc(c.ctype) + '</td><td>' +
       (c.expires_on || 'no expiry') + '</td><td class="row"><a class="btn sm" href="/cert/' + esc(c.code) + '" target="_blank">View</a>' +
       '<a class="btn sm" href="/verify/' + esc(c.code) + '" target="_blank">Verify</a>' +
+      '<a class="btn sm" href="/cert/' + esc(c.code) + '/letter" target="_blank">Letter</a>' +
+      '<a class="btn sm" href="/api/reg/badge/' + esc(c.code) + '" target="_blank">Badge</a>' +
       (c.voided ? '<span class="badge exp">void</span>' : '<button class="btn sm danger" data-void="' + c.id + '" type="button">Void</button>') +
       '</td></tr>'; }).join('') + '</table>' : '<div class="help">No certificates issued yet.</div>';
   $('#certList').querySelectorAll('[data-void]').forEach(function(b){
