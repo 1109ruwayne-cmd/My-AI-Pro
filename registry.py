@@ -410,8 +410,10 @@ Questions: 1109ruwayne@gmail.com</p></main></body></html>""")
 h1{{font-size:34px;margin:26px 0 6px;letter-spacing:.02em}} .holder{{font-size:26px;font-style:italic;margin:18px 0 6px}}
 .type{{font-size:17px;margin:0 0 20px}} .scope{{max-width:760px;margin:0 auto 26px;font-size:14.5px;line-height:1.7;color:#3c4160}}
 .meta{{display:flex;justify-content:space-between;gap:20px;font:12.5px/1.6 system-ui;color:#64698a;margin-top:34px}}
-.sig{{margin-top:44px;display:flex;justify-content:space-between;gap:40px;font:13px/1.5 system-ui}}
-.sig div{{flex:1;border-top:1.5px solid #1c2033;padding-top:6px}}
+.sig{{margin-top:12px;display:flex;justify-content:space-between;gap:40px;font:13px/1.5 system-ui}}
+.sigcol{{flex:1}} .sigruled{{border-top:1.5px solid #1c2033;padding-top:6px}}
+.sigslot{{height:72px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px}}
+.sigslot .sigimg{{height:64px;margin:0}} .sigslot .script{{font-size:26px;margin:0}}
 .signrow{{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;margin-top:38px}}
 .sigblock{{flex:1;text-align:left}} .sigline{{font:12.5px/1.4 system-ui;color:#3c4160;border-top:1.5px solid #1c2033;padding-top:6px;max-width:320px}}
 .sigimg{{height:88px;display:block;margin-bottom:6px}}
@@ -431,7 +433,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
   <div class="sigblock">{signature_html}<div class="sigline">Ruwayne Campher - issuer &amp; registered verifier</div></div>
   <div class="stampblock">{stamp_svg}</div>
 </div>
-<div class="sig"><div>Signature as above</div><div>Verify at /verify/{cert['code']}</div></div>
+<div class="sig"><div class="sigcol"><div class="sigslot">{signature_html}</div><div class="sigruled">Signature as above</div></div><div class="sigcol"><div class="sigslot"></div><div class="sigruled">Verify at /verify/{cert['code']}</div></div></div>
 </div></body></html>""")
 
     # ---------------- public API
