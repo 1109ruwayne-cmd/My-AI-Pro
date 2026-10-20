@@ -1385,6 +1385,10 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
         last_round = round_no == MAX_TOOL_ROUNDS
         if last_round:
             kwargs["tool_choice"] = "none"   # enough searching: answer now
+        elif gemini:
+            # Tool-decision rounds only emit calls; a huge token budget makes
+            # Gemini's compat layer stall for minutes. Keep these rounds small.
+            kwargs["max_tokens"] = min(int(kwargs.get("max_tokens") or 4096), 4096)
         try:
             text, calls, finish = yield from _stream_round(client, kwargs, state)
         except (openai.BadRequestError, openai.NotFoundError, openai.UnprocessableEntityError) as exc:
