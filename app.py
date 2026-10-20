@@ -32,6 +32,7 @@ from openai import OpenAI
 
 import billing
 import connectors
+import selfheal
 import skills
 import ratelimit
 from knowledge_base import SUPPORTED_TYPES, KnowledgeBase
@@ -93,6 +94,8 @@ SOURCE_SYNC = [
     ("05-source-knowledge-base.md", "knowledge_base.py", "the knowledge base engine"),
     ("06-source-frontend-ui.md", "static/index.html", "the complete frontend"),
     ("08-source-security.md", "ratelimit.py", "the rate limiting and brute-force protection module"),
+    ("09-source-selfheal.md", "selfheal.py", "the self-repair engine"),
+    ("10-source-registry.md", "registry.py", "the certification registry module"),
 ]
 SOURCE_SYNC_INFRA = ("07-source-infrastructure.md",
                      [("Dockerfile", "the Docker image it runs in"),
@@ -136,6 +139,9 @@ def _sync_source_to_kb() -> None:
         print(f"[startup] source sync failed: {e}", flush=True)
 
 
+_restored = selfheal.restore_sources(KNOWLEDGE_DIR)
+if _restored:
+    print(f"[startup] self-repair restored source from knowledge base: {_restored}", flush=True)
 _sync_source_to_kb()
 SERVER_API_KEY = os.environ.get("AI_API_KEY", "").strip()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
@@ -683,6 +689,7 @@ def sse(obj: dict) -> str:
 # --------------------------------------------------------------------------- app
 app = FastAPI(title="My AI", docs_url=None, redoc_url=None, openapi_url=None)
 kb = KnowledgeBase(KNOWLEDGE_DIR)
+threading.Thread(target=selfheal.watchdog, args=(lambda: kb, KNOWLEDGE_DIR), daemon=True).start()
 
 
 @app.get("/")
@@ -784,6 +791,22 @@ async def owner_activate(request: Request):
         raise HTTPException(403, "This sign-in link is no longer valid - ask for a fresh one.")
     billing.mark_owner(billing.visitor_id(request))
     return {"ok": True, "password": ADMIN_PASSWORD}
+
+
+@app.get("/api/selfheal")
+def selfheal_status(request: Request):
+    """Owner-gated view of the self-repair engine: heal log + tracked files."""
+    require_admin(request)
+    return {"heals": selfheal.heals(60), "tracked": selfheal.TRACKED,
+            "watchdog_seconds": selfheal._interval}
+
+
+@app.post("/api/selfheal/run")
+def selfheal_run(request: Request):
+    """Owner-triggered deep diagnostics: checks and safely repairs what it can."""
+    require_admin(request)
+    report = selfheal.run_diagnostics(kb=kb, kb_dir=KNOWLEDGE_DIR, deep=True)
+    return {"report": report, "heals": selfheal.heals(60)}
 
 
 @app.get("/owner-activate", response_class=HTMLResponse)
@@ -1511,6 +1534,7 @@ def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = F
     try:
         yield from _core()
     except Exception as exc:
+        selfheal.note_error(exc, base_url)
         retried = False
         if "openrouter.ai" in base_url and not state["text"] and \
                 ("402" in str(exc) or "afford" in str(exc) or "credits" in str(exc)):

@@ -546,6 +546,12 @@ details.adv[open] summary{margin-bottom:14px}
     </header>
     <div class="content">
       <div class="field">
+        <label class="lbl">🩺 Self-Repair engine (AutoMedic)</label>
+        <div class="help" id="shStatus">Diagnostics idle - open Settings or run a check.</div>
+        <button class="btn" id="shRun" type="button">Run diagnostics now</button>
+        <div class="help" id="shLog" style="max-height:150px;overflow:auto;white-space:pre-wrap;margin-top:6px"></div>
+      </div>
+      <div class="field">
         <label class="lbl" for="cfgName">Your AI's name</label>
         <input class="input" id="cfgName" maxlength="60" placeholder="My AI">
       </div>
@@ -2696,6 +2702,7 @@ details.adv[open] summary{margin-bottom:14px}
     renderConnectors();
     updateProviderHelp();
     $('#settingsModal').hidden = false;
+    shLoad();
     closeSidebar();
     if (focus === 'connectors') {
       var adv = document.querySelector('details.adv');
@@ -2707,6 +2714,31 @@ details.adv[open] summary{margin-bottom:14px}
       setTimeout(function () { (getKey(sel.value) || sel.value === 'ollama' ? $('#cfgName') : $('#cfgKey')).focus(); }, 30);
     }
   }
+  /* self-repair engine panel */
+  function shAdminHeaders(){ return { 'X-Admin-Password': sessionStorage.getItem('myai.admin') || '' }; }
+  function shRender(d){
+    $('#shStatus').textContent = 'Watchdog every ' + d.watchdog_seconds + 's · ' + d.tracked.length +
+      ' tracked files · ' + (d.heals ? d.heals.length : 0) + ' log entries shown.';
+    $('#shLog').textContent = (d.heals && d.heals.length)
+      ? d.heals.slice(0, 14).map(function(h){ return new Date(h.ts * 1000).toLocaleString() +
+          ' · ' + h.kind + ' · ' + h.detail + ' → ' + h.action + ' (' + h.outcome + ')'; }).join('\n')
+      : 'No repairs logged - every check healthy.';
+  }
+  function shLoad(){
+    fetch('/api/selfheal', { headers: shAdminHeaders() }).then(function(r){ return r.json(); })
+      .then(shRender).catch(function(e){ $('#shStatus').textContent = 'Self-repair status unavailable: ' + e; });
+  }
+  $('#shRun').addEventListener('click', function(){
+    $('#shStatus').textContent = 'Running diagnostics…';
+    fetch('/api/selfheal/run', { method: 'POST', headers: shAdminHeaders() })
+      .then(function(r){ return r.json(); }).then(function(d){
+        var rep = (d.report || []).map(function(x){ return '• ' + x.check + ': ' + x.status +
+          (x.action && x.action !== 'none' ? '  [' + x.action + ']' : ''); }).join('\n');
+        shRender(d);
+        $('#shLog').textContent = rep + '\n—— heal log ——\n' + ($('#shLog').textContent || '');
+      }).catch(function(e){ $('#shStatus').textContent = 'Diagnostics failed: ' + e; });
+  });
+
   function closeSettings() { $('#settingsModal').hidden = true; }
 
   function setVal(sel, v) { var el = $(sel); if (el) el.value = v; }
