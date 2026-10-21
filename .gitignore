@@ -5,3 +5,5 @@ knowledge/.upload-*
 usage.db
 knowledge/0[1-7]-source-*.md
 registry.db
+desktop-app/node_modules/
+desktop-app/dist/

@@ -1,0 +1,49 @@
+{
+  "name": "my-ai-pro-desktop",
+  "productName": "My AI Pro",
+  "version": "1.0.0",
+  "description": "My AI Pro as a standalone Windows desktop app (secure shell around the hosted service).",
+  "main": "main.js",
+  "author": "Ruwayne Campher",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "za.myai.pro.desktop",
+    "productName": "My AI Pro",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "assets/icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "My AI Pro"
+    }
+  }
+}
