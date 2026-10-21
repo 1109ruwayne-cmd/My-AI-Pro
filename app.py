@@ -828,7 +828,7 @@ def modules_status(request: Request):
         {"name": "Render deploy token", "present": False,
          "where": "held outside the app by design (owner ops)"},
         {"name": "GitHub PAT", "present": False,
-         "where": "EXPIRED - owner to re-mint; never stored in app code"},
+         "where": "re-minted 2026-10-20 - held by owner outside the app; never stored in app code"},
     ]
     mods = [
         {"name": "Chat engine + fallback chain", "status": f"{len(PROVIDERS)} providers"},
@@ -1126,11 +1126,12 @@ async def chat(request: Request):
         billing.mark_owner(visitor)          # first proof of the password = owner for life
     admin_ok = admin_ok or billing.is_owner(visitor)
     if not admin_ok:
-        # protect the AI key's quota: one visitor may ask 10 questions a minute
+        # protect the AI key's quota: 10 questions a minute, doubled for priority tiers
         if ratelimit.ip_banned(ratelimit.client_ip(request)):
             raise HTTPException(429, "This connection was temporarily blocked after repeated "
                                      "abuse. Try again later.")
-        allowed, retry = ratelimit.hit(f"chat:{visitor}", 10, 60)
+        chat_rate = 20 if billing.priority_chat(cfg, visitor) else 10
+        allowed, retry = ratelimit.hit(f"chat:{visitor}", chat_rate, 60)
         if not allowed:
             billing.abuse_event(request, "chat_limit", f"visitor {visitor[:12]}")
             raise HTTPException(429, f"Too many questions at once - try again in {retry} s.")

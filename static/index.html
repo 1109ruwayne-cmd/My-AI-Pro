@@ -278,6 +278,12 @@ button{cursor:pointer}
 .paywall .pw-sub{color:var(--muted);font-size:13px;margin:6px 0 10px}
 .pw-plan{display:flex;align-items:baseline;gap:10px;border:1px solid var(--hair);background:var(--surface);border-radius:var(--r-m);padding:10px 14px;margin-bottom:10px;box-shadow:0 1px 1px var(--hair)}
 .pw-plan b{font-size:15px;letter-spacing:-.01em}
+.pw-tiers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pw-tier{flex:1;min-width:150px;text-align:left;border:1.5px solid var(--hair);background:var(--surface);border-radius:var(--r-m);padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;color:inherit;box-shadow:0 1px 1px var(--hair)}
+.pw-tier b{font-size:14px;letter-spacing:-.01em}
+.pw-tier small{color:var(--muted);font-size:12px}
+.pw-tier .pw-price{margin-left:0;font-size:19px}
+.pw-tier.sel{border-color:var(--accent-ink);background:var(--warn-soft);outline:2px solid var(--accent-ink);outline-offset:-2px}
 .pw-price{margin-left:auto;font-size:22px;font-weight:800;color:var(--accent-ink);letter-spacing:-.02em}
 .pw-price span{font-size:12.5px;font-weight:600;color:var(--muted)}
 .pw-list{margin:0 0 12px;padding-left:18px;font-size:13.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
@@ -612,10 +618,13 @@ details.adv[open] summary{margin-bottom:14px}
           <div class="field"><label class="lbl" for="billPrompts">Free questions per visitor</label><input class="input" id="billPrompts" type="number" min="0" max="100000"></div>
           <div class="field"><label class="lbl" for="billTokens">Free tokens per visitor</label><input class="input" id="billTokens" type="number" min="0" max="10000000" step="1000"></div>
           <div class="field"><label class="lbl" for="billWindow">Allowance resets</label><select id="billWindow"><option value="lifetime">Never (one free trial per visitor)</option><option value="monthly">Every 30 days</option></select></div>
-          <div class="field"><label class="lbl" for="billPlan">Plan name</label><input class="input" id="billPlan" maxlength="40"></div>
-          <div class="field"><label class="lbl" for="billPrice">Price</label><input class="input" id="billPrice" inputmode="decimal"></div>
           <div class="field"><label class="lbl" for="billCurrency">Currency</label><select id="billCurrency"><option>ZAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>NAD</option><option>BWP</option></select></div>
           <div class="field"><label class="lbl" for="billInterval">Billed</label><select id="billInterval"><option value="month">Monthly</option><option value="year">Yearly</option><option value="week">Weekly</option></select></div>
+        </div>
+        <div class="field" style="margin:10px 0">
+          <label class="lbl">Subscription tiers — first tier is the entry plan; each can set its own price and daily fair-use cap (0 = unlimited)</label>
+          <div id="billTiers" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn small" type="button" id="billTierAdd" style="margin-top:6px">+ Add tier</button>
         </div>
         <div class="radios" style="margin:10px 0">
           <label class="radio"><input type="checkbox" id="billManual"><span>Bank transfer / EFT<small>You confirm each payment in the owner dashboard below.</small></span></label>
@@ -1101,7 +1110,10 @@ details.adv[open] summary{margin-bottom:14px}
       pill.hidden = false;
       if (u.admin) { pill.textContent = u.owner_lifetime ? '\ud83d\udc51 Owner \u00b7 lifetime' : ' Owner'; pill.title = 'Owner account \u2014 activated for life. No limits, no paywall, ever.'; }
       else if (u.subscribed) {
-        pill.textContent = '⭐ ' + (u.plan || 'Plus');
+        pill.textContent = '⭐ ' + (u.plan || 'Pro');
+        if (u.tier && u.tier.daily_limit) {
+          pill.textContent += ' · ' + Math.max(0, u.tier.daily_limit - u.tier.daily_used) + ' left today';
+        }
         pill.title = u.sub_until ? 'Subscribed until ' + new Date(u.sub_until * 1000).toDateString() : 'Subscribed';
       } else if (u.verifying) {
         var vm = Math.max(0, Math.round((u.verify_until - Date.now() / 1000) / 60));
@@ -1130,18 +1142,52 @@ details.adv[open] summary{margin-bottom:14px}
 
   function cur(sym) { return ({ ZAR: 'R', USD: '$', EUR: '€', GBP: '£' })[sym] || (sym + ' '); }
 
-  function paywallHtml(q) {
+  function tierPerks(t) {
+    var bits = [t.daily_prompts ? Number(t.daily_prompts).toLocaleString() + ' questions/day'
+                                : 'Unlimited fair-use questions'];
+    if (t.priority) bits.push('priority answers');
+    return bits.join(' + ');
+  }
+
+  function tierList(q) {
+    return (q.tiers && q.tiers.length) ? q.tiers
+      : [{ id: 'pro', name: q.plan || 'Subscription', price: q.price, daily_prompts: 0, priority: false }];
+  }
+
+  function tierPickerHtml(q, selId) {
     var per = q.interval === 'year' ? '/year' : q.interval === 'week' ? '/week' : '/month';
-    var h = '<div class="paywall">' +
+    var h = '<div class="pw-tiers">';
+    tierList(q).forEach(function (t) {
+      h += '<button type="button" class="pw-tier' + (t.id === selId ? ' sel' : '') +
+        '" data-pw="tier" data-tier="' + esc(t.id) + '">' +
+        '<b>' + esc(t.name) + '</b>' +
+        '<span class="pw-price">' + cur(q.currency) + esc(t.price) + '<span>' + per + '</span></span>' +
+        '<small>' + esc(tierPerks(t)) + '</small></button>';
+    });
+    return h + '</div>';
+  }
+
+  function paywallHtml(q) {
+    var tiers = tierList(q);
+    var daily = q.reason === 'daily';
+    var selId = tiers[0].id;
+    if (daily && q.tier) {
+      for (var i = 0; i < tiers.length; i++) {
+        if (tiers[i].id === q.tier.id) { selId = tiers[Math.min(i + 1, tiers.length - 1)].id; break; }
+      }
+    }
+    var h = '<div class="paywall" data-tier="' + esc(selId) + '">' +
       (q.verify_expired ? '<div class="pw-note" style="margin-bottom:8px">⏳ Your 3-hour verification window has ended. Your payment is still waiting for the owner to confirm - your subscription activates the moment they approve.</div>' : '') +
-      '<div class="pw-head">🔒 Your free allowance is used up</div>' +
-      '<p class="pw-sub">You asked ' + q.prompts_used + ' free question' + (q.prompts_used === 1 ? '' : 's') +
-      (q.reason === 'tokens' ? ' and reached the free token limit' : '') +
-      '. Continue with ' + esc(q.plan || 'the subscription') + ':</p>' +
-      '<div class="pw-plan"><b>' + esc(q.plan || 'Subscription') + '</b>' +
-      '<span class="pw-price">' + cur(q.currency) + esc(q.price) + '<span>' + per + '</span></span></div>' +
-      '<ul class="pw-list"><li>Unlimited questions - coding, engineering, cybersecurity</li>' +
-      '<li>Every connected AI engine and your files</li>' +
+      (daily
+        ? '<div class="pw-head">⏱ Today\u2019s fair-use allowance is used up</div>' +
+          '<p class="pw-sub">You asked ' + (q.tier ? q.tier.daily_used : 0) + ' questions in the last 24 hours - your ' +
+          esc(q.tier ? q.tier.name : (q.plan || '')) + ' allowance. It refills continuously. Need more right now? Upgrade:</p>'
+        : '<div class="pw-head">🔒 Your free allowance is used up</div>' +
+          '<p class="pw-sub">You asked ' + q.prompts_used + ' free question' + (q.prompts_used === 1 ? '' : 's') +
+          (q.reason === 'tokens' ? ' and reached the free token limit' : '') + '. Choose your plan:</p>') +
+      tierPickerHtml(q, selId) +
+      '<ul class="pw-list"><li>Every feature: coding, engineering, cybersecurity, your files</li>' +
+      '<li>Every connected AI engine included</li>' +
       '<li>Voice answers, code runner and previews included</li></ul>';
     if (q.providers && (q.providers.stripe || q.providers.paystack)) {
       h += '<div class="pw-row"><input class="input" data-pw="email" type="email" ' +
@@ -1267,23 +1313,32 @@ details.adv[open] summary{margin-bottom:14px}
       if (el.tagName !== 'BUTTON') return;
       el.addEventListener('click', function () {
         var kind = el.getAttribute('data-pw'), status = card.querySelector('[data-pw="status"]');
+        if (kind === 'tier') {
+          each(card.querySelectorAll('[data-pw="tier"]'), function (b) { b.classList.remove('sel'); });
+          el.classList.add('sel');
+          card.setAttribute('data-tier', el.getAttribute('data-tier'));
+          return;
+        }
         if (kind === 'stripe' || kind === 'paystack') {
           var email = (card.querySelector('[data-pw="email"]') || {}).value || '';
           pwStatus(card, 'Opening the secure payment page…');
           api('api/billing/checkout', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider: kind, email: email.trim() })
+            body: JSON.stringify({ provider: kind, email: email.trim(),
+                                   tier: card.getAttribute('data-tier') || '' })
           }).then(function (d) {
             window.open(d.url, '_blank', 'noopener');
             pwStatus(card, 'Finish the payment in the new tab, then press “I\'m subscribed - check again”.', 'ok');
           }).catch(function (e) { pwStatus(card, e.message, 'bad'); });
         } else if (kind === 'manual') {
           pwStatus(card, 'Fetching your payment reference…');
-          api('api/billing/paid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+          api('api/billing/paid', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tier: card.getAttribute('data-tier') || '' }) })
             .then(function (d) {
               var box = card.querySelector('[data-pw="bankbox"]');
               if (box) {
                 box.innerHTML = '<div class="pw-bank">' +
+                  (d.tier_name ? '<b>Plan</b><span>' + esc(d.tier_name) + '</span>' : '') +
                   '<b>Bank</b><span>' + esc(d.bank.bank || '-') + '</span>' +
                   '<b>Account name</b><span>' + esc(d.bank.account_name || '-') + '</span>' +
                   '<b>Account number</b><code>' + esc(d.bank.account_number || '-') + '</code>' +
@@ -2070,7 +2125,7 @@ details.adv[open] summary{margin-bottom:14px}
     if (live) { extra.innerHTML = ''; return; }
 
     var html = '', sources = visibleSources(m), last = isLastMessage(m) && !S.streaming;
-    if (m.quota && !(S.usage && (S.usage.subscribed || S.usage.admin))) {
+    if (m.quota && (m.quota.reason === 'daily' || !(S.usage && (S.usage.subscribed || S.usage.admin)))) {
       html += (S.usage && S.usage.verifying) ? verifyHtml(m.quota) : paywallHtml(m.quota);
     }
     if (m.engine && m.engine !== 'main') {
@@ -2691,8 +2746,9 @@ details.adv[open] summary{margin-bottom:14px}
     setVal('#billPrompts', B.free_prompts === undefined ? 15 : B.free_prompts);
     setVal('#billTokens', B.free_tokens === undefined ? 120000 : B.free_tokens);
     setVal('#billWindow', B.window || 'lifetime');
-    setVal('#billPlan', B.plan_name || 'My AI Plus');
-    setVal('#billPrice', B.price || '49');
+    renderTierRows(B.tiers && B.tiers.length ? B.tiers
+      : [{ id: 'pro', name: B.plan_name || 'My AI Pro', price: B.price || '49',
+           daily_prompts: 0, priority: false }]);
     setVal('#billCurrency', B.currency || 'ZAR');
     setVal('#billInterval', B.interval || 'month');
     if ($('#billManual')) $('#billManual').checked = !!BP.manual;
@@ -2817,6 +2873,59 @@ details.adv[open] summary{margin-bottom:14px}
     });
   }
 
+  /* ------------------------------------------------- subscription tiers (Settings) */
+  function tierRowHtml(t) {
+    t = t || { name: '', price: '', daily_prompts: 0, priority: false };
+    return '<div class="bgrid tier-row" style="grid-template-columns:2fr 1fr 1fr auto auto;gap:6px;align-items:center">' +
+      '<input class="input t-name" placeholder="Plan name (e.g. My AI Pro)" maxlength="40" value="' + esc(t.name) + '">' +
+      '<input class="input t-price" placeholder="Price" inputmode="decimal" value="' + esc(t.price) + '">' +
+      '<input class="input t-daily" placeholder="Daily cap (0 = unlimited)" inputmode="numeric" value="' + (Number(t.daily_prompts) || 0) + '">' +
+      '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="t-prio"' + (t.priority ? ' checked' : '') + '> priority</label>' +
+      '<button class="btn small t-del" type="button" title="Remove this tier">\u2715</button></div>';
+  }
+
+  function bindTierRow(box, row) {
+    var del = row.querySelector('.t-del');
+    if (del) del.addEventListener('click', function () {
+      if (box.querySelectorAll('.tier-row').length > 1) row.remove();
+    });
+  }
+
+  function renderTierRows(tiers) {
+    var box = $('#billTiers'); if (!box) return;
+    tiers = (tiers && tiers.length) ? tiers : [];
+    box.innerHTML = tiers.map(tierRowHtml).join('');
+    var rows = box.querySelectorAll('.tier-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].setAttribute('data-tid', tiers[i].id || '');
+      bindTierRow(box, rows[i]);
+    }
+    var add = $('#billTierAdd');
+    if (add) add.onclick = function () {
+      if (box.querySelectorAll('.tier-row').length >= 6) return;
+      box.insertAdjacentHTML('beforeend', tierRowHtml(null));
+      var fresh = box.querySelectorAll('.tier-row');
+      fresh[fresh.length - 1].setAttribute('data-tid', '');
+      bindTierRow(box, fresh[fresh.length - 1]);
+    };
+  }
+
+  function collectTiers() {
+    var box = $('#billTiers'), out = [];
+    if (!box) return out;
+    each(box.querySelectorAll('.tier-row'), function (row) {
+      var name = (row.querySelector('.t-name').value || '').trim();
+      var price = (row.querySelector('.t-price').value || '').trim();
+      if (!name || !price) return;
+      var id = row.getAttribute('data-tid') ||
+        name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
+      out.push({ id: id || ('tier-' + (out.length + 1)), name: name, price: price,
+                 daily_prompts: Number(row.querySelector('.t-daily').value) || 0,
+                 priority: !!row.querySelector('.t-prio').checked });
+    });
+    return out;
+  }
+
   function saveSettings() {
     var id = $('#cfgProvider').value, checked = document.querySelector('input[name=mode]:checked');
     var body = {
@@ -2840,8 +2949,7 @@ details.adv[open] summary{margin-bottom:14px}
         free_prompts: Number($('#billPrompts').value) || 0,
         free_tokens: Number($('#billTokens').value) || 0,
         window: $('#billWindow').value,
-        plan_name: $('#billPlan').value.trim() || 'My AI Plus',
-        price: $('#billPrice').value.trim() || '49',
+        tiers: collectTiers(),
         currency: $('#billCurrency').value,
         interval: $('#billInterval').value,
         providers: { manual: $('#billManual').checked, stripe: $('#billStripe').checked,

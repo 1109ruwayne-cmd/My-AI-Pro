@@ -131,8 +131,20 @@ hosted services; the site works fully without any of them.
 
 - Every visitor gets **15 free questions** and about **120,000 free tokens**,
   tracked per browser. A pill in the sidebar shows what is left.
-- After that, the paywall offers **My AI Pro — R49 per month** (South African
-  Rand, configurable by the owner).
+- After that, the paywall offers a **ladder of monthly tiers** (South African
+  Rand, all configurable by the owner in Settings → Plans & payments):
+  - **My AI Pro — R49 per month**: all features, fair-use allowance of
+    **300 questions per day** (rolling 24 h).
+  - **My AI Pro Plus — R149 per month**: **1,000 questions per day** plus
+    **priority answers** (doubled rate limit - served first when engines are
+    busy).
+  - **My AI Pro Max — R249 per month**: **3,000 questions per day** plus
+    **priority answers**.
+  Each step up the ladder costs **R100 more**. The buyer picks a tier on the
+  paywall; the amount and EFT reference follow that tier, and approval
+  activates exactly the tier that was paid for. When a subscriber reaches
+  their daily allowance they see an upgrade card instead of a hard stop - the
+  allowance refills continuously.
 - **Pay by EFT (bank transfer)**: Capitec Bank, account holder **Ruwayne
   Campher**, account number **1317339280**, universal branch code **470010**.
   The paywall shows a unique reference like **MA-XXXX-XXXXXX** that the payer
@@ -157,7 +169,8 @@ hosted services; the site works fully without any of them.
   carries hardening headers (nosniff, referrer-policy, permissions-policy,
   frame-ancestors).
 - Rate limiting (module ratelimit.py, file 08): each visitor may ask 10
-  questions per minute; payment-reference requests are limited to 3 per
+  questions per minute (20 per minute on the priority tiers Pro Plus / Pro
+  Max); payment-reference requests are limited to 3 per
   15 minutes with at most 5 unresolved references per visitor; coupon-code
   guessing is limited to 5 attempts per 10 minutes.
 - Brute-force lockout: 10 wrong admin-password attempts from one IP within

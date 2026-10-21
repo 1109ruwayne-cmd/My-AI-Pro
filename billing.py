@@ -65,10 +65,21 @@ DEFAULT_BILLING = {
     "free_prompts": 15,            # how many questions a new visitor gets
     "free_tokens": 120000,         # and how many tokens (roughly words x 1.35)
     "window": "lifetime",          # "lifetime" or "monthly"
-    "plan_name": "My AI Plus",
+    "plan_name": "My AI Pro",
     "price": "49",                 # in major units, e.g. Rand
     "currency": "ZAR",
     "interval": "month",
+    # Subscription ladder: the first tier is the entry plan; each tier carries its
+    # own price and a per-24h fair-use allowance (0 = unlimited). "priority" tiers
+    # get the doubled chat rate limit (served first when engines are busy).
+    "tiers": [
+        {"id": "pro", "name": "My AI Pro", "price": "49",
+         "daily_prompts": 300, "priority": False},
+        {"id": "plus", "name": "My AI Pro Plus", "price": "149",
+         "daily_prompts": 1000, "priority": True},
+        {"id": "max", "name": "My AI Pro Max", "price": "249",
+         "daily_prompts": 3000, "priority": True},
+    ],
     "providers": {"manual": True, "stripe": False, "paystack": False},
     "stripe_secret": "",
     "stripe_webhook_secret": "",
@@ -81,6 +92,69 @@ DEFAULT_BILLING = {
 }
 
 SECRET_FIELDS = ("stripe_secret", "stripe_webhook_secret", "paystack_secret")
+
+
+# --------------------------------------------------------------------------- tiers
+def _clean_tier(t) -> dict | None:
+    """Validate one subscription tier; None when it is unusable."""
+    if not isinstance(t, dict):
+        return None
+    tid = "".join(ch for ch in str(t.get("id") or "").lower()
+                  if ch.isalnum() or ch in "-_")[:20]
+    name = str(t.get("name") or "").strip()[:40]
+    price = str(t.get("price") or "").strip()[:10]
+    try:
+        if float(price) < 0:
+            return None
+    except ValueError:
+        return None
+    if not tid or not name:
+        return None
+    try:
+        daily = max(0, min(int(t.get("daily_prompts", 0) or 0), 10_000_000))
+    except (TypeError, ValueError):
+        daily = 0
+    return {"id": tid, "name": name, "price": price,
+            "daily_prompts": daily, "priority": bool(t.get("priority"))}
+
+
+def tiers_of(b: dict) -> list:
+    """The tier ladder - falls back to a single tier from legacy plan/price fields."""
+    tiers = [t for t in (_clean_tier(x) for x in (b.get("tiers") or [])) if t][:6]
+    if not tiers:
+        tiers = [{"id": "pro", "name": b.get("plan_name") or "My AI Pro",
+                  "price": str(b.get("price") or "49"),
+                  "daily_prompts": 0, "priority": False}]
+    return tiers
+
+
+def tier_by_id(b: dict, tid: str) -> dict:
+    """Pick a tier by id; unknown/empty ids get the entry tier."""
+    want = str(tid or "").strip().lower()
+    for t in tiers_of(b):
+        if t["id"] == want:
+            return t
+    return tiers_of(b)[0]
+
+
+def tier_for_plan(b: dict, plan_name: str) -> dict | None:
+    """Match a stored subscription's plan name to a tier.
+    Unknown names (old 'My AI Plus', 'owner grant') return None = grandfathered,
+    no daily cap, no priority."""
+    name = str(plan_name or "").strip().lower()
+    for t in tiers_of(b):
+        if t["name"].lower() == name:
+            return t
+    return None
+
+
+def priority_chat(cfg: dict, visitor: str) -> bool:
+    """True when this visitor holds a priority tier - app.py doubles their chat rate."""
+    sub = sub_for(visitor)
+    if not (sub and sub["until"] > time.time()):
+        return False
+    t = tier_for_plan(billing_config(cfg), sub["plan"])
+    return bool(t and t.get("priority"))
 
 
 # --------------------------------------------------------------------------- storage
@@ -239,8 +313,15 @@ def billing_config(cfg: dict) -> dict:
     for k, v in saved.items():
         if k in ("providers", "bank") and isinstance(v, dict):
             out[k].update({a: b for a, b in v.items() if a in out[k] or k == "bank"})
+        elif k == "tiers" and isinstance(v, list):
+            cleaned = [t for t in (_clean_tier(x) for x in v) if t][:6]
+            if cleaned:
+                out["tiers"] = cleaned
         elif k in out:
             out[k] = v
+    out["tiers"] = tiers_of(out)
+    out["plan_name"] = out["tiers"][0]["name"]   # legacy single-plan fields follow tier 0
+    out["price"] = out["tiers"][0]["price"]
     return out
 
 
@@ -268,6 +349,11 @@ def merge_billing(old: dict, incoming: dict) -> dict:
             if val:
                 out[k] = val[:300]
             continue
+        if k == "tiers" and isinstance(v, list):
+            cleaned = [t for t in (_clean_tier(x) for x in v) if t][:6]
+            if cleaned:
+                out["tiers"] = cleaned
+            continue
         if k in ("providers", "bank") and isinstance(v, dict):
             for a, b in v.items():
                 if a in out[k]:
@@ -292,6 +378,16 @@ def merge_billing(old: dict, incoming: dict) -> dict:
                 out[k] = str(v or "").strip()[:300]
             else:
                 out[k] = str(v or "").strip()[:400]
+    if "tiers" not in incoming:            # legacy clients still edit plan/price directly
+        t0 = tiers_of(out)[0]
+        if str(incoming.get("plan_name") or "").strip():
+            t0["name"] = str(incoming["plan_name"]).strip()[:40]
+        if str(incoming.get("price") or "").strip():
+            t0["price"] = str(incoming["price"]).strip()[:10]
+        out["tiers"] = [t0] + [t for t in tiers_of(out)[1:]]
+    out["tiers"] = tiers_of(out)
+    out["plan_name"] = out["tiers"][0]["name"]
+    out["price"] = out["tiers"][0]["price"]
     return out
 
 
@@ -429,6 +525,15 @@ def ban_gate(request: Request, vid: str = "") -> None:
                                  f"abuse. Try again in {ratelimit.ban_retry_after(ip) // 60 + 1} min.")
 
 
+def _daily_usage(visitor: str) -> int:
+    """Questions asked in the last 24 h (rolling window - no midnight surprises)."""
+    since = time.time() - 86400
+    with _lock, _connect() as con:
+        row = con.execute("SELECT COUNT(*) AS n FROM usage WHERE visitor_id=? AND ts>=? "
+                          "AND blocked=0", (visitor, since)).fetchone()
+    return row["n"]
+
+
 def check_quota(cfg: dict, visitor: str, admin_ok: bool) -> dict:
     """Is this visitor allowed to ask another question? Returns a status dict."""
     b = billing_config(cfg)
@@ -437,6 +542,14 @@ def check_quota(cfg: dict, visitor: str, admin_ok: bool) -> dict:
     if admin_ok or not b["enabled"]:
         return {"allowed": True, "sub": active, "reason": ""}
     if active:
+        tier = tier_for_plan(b, sub["plan"])
+        cap = int(tier["daily_prompts"]) if tier else 0
+        if cap > 0:
+            day = _daily_usage(visitor)
+            if day >= cap:
+                return {"allowed": False, "sub": True, "reason": "daily",
+                        "daily_used": day, "daily_limit": cap,
+                        "tier_name": tier["name"], "sub_row": sub}
         return {"allowed": True, "sub": True, "reason": ""}
     verify_until, verify_expired = verify_state(visitor)
     if verify_until:                       # 3-hour window: paid, awaiting owner confirmation
@@ -469,6 +582,8 @@ def usage_payload(cfg: dict, visitor: str, admin_ok: bool) -> dict:
     verify_until, verify_expired = verify_state(visitor)
     left_p = max(0, b["free_prompts"] - totals["prompts"]) if b["free_prompts"] else None
     left_t = max(0, b["free_tokens"] - totals["tokens"]) if b["free_tokens"] else None
+    tiers = tiers_of(b)
+    tier = tier_for_plan(b, sub["plan"]) if active else None
     return {
         "visitor": visitor,
         "enabled": bool(b["enabled"]) and not admin_ok,
@@ -483,10 +598,15 @@ def usage_payload(cfg: dict, visitor: str, admin_ok: bool) -> dict:
         "subscribed": active or admin_ok,
         "owner_lifetime": admin_ok and is_owner(visitor),
         "sub_until": sub["until"] if sub else None,
-        "plan": b["plan_name"],
+        "plan": (sub["plan"] if active else b["plan_name"]),
         "price": b["price"],
         "currency": b["currency"],
         "interval": b["interval"],
+        "tiers": tiers,
+        "tier": ({"id": tier["id"], "name": tier["name"],
+                  "daily_limit": tier["daily_prompts"],
+                  "daily_used": _daily_usage(visitor) if tier["daily_prompts"] else 0,
+                  "priority": tier["priority"]} if tier else None),
         "providers": {k: bool(v) for k, v in b["providers"].items()},
         "bank": b["bank"],
         "pay_note": b["pay_note"],
@@ -512,8 +632,9 @@ def _new_sub(con: sqlite3.Connection, visitor: str, days: int, plan: str, provid
     return until
 
 
-def make_manual_payment(cfg: dict, visitor: str) -> dict:
+def make_manual_payment(cfg: dict, visitor: str, tier_id: str = "") -> dict:
     b = billing_config(cfg)
+    tier = tier_by_id(b, tier_id)
     with _lock, _connect() as con:
         pending = con.execute("SELECT COUNT(*) AS n FROM payments WHERE visitor_id=? "
                               "AND status='pending'", (visitor,)).fetchone()["n"]
@@ -526,8 +647,8 @@ def make_manual_payment(cfg: dict, visitor: str) -> dict:
     with _lock, _connect() as con:
         con.execute("INSERT INTO payments(id, visitor_id, provider, amount, currency, status, "
                     "ref, email, created, paid_at, meta) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    (pid, visitor, "manual", b["price"], b["currency"], "pending", ref, "",
-                     time.time(), None, ""))
+                    (pid, visitor, "manual", tier["price"], b["currency"], "pending", ref, "",
+                     time.time(), None, json.dumps({"tier": tier["id"]})))
         hours = float(b.get("verify_hours") or 0)
         if hours > 0:
             ever = con.execute("SELECT COUNT(*) AS n FROM payments WHERE visitor_id=? "
@@ -537,7 +658,8 @@ def make_manual_payment(cfg: dict, visitor: str) -> dict:
                 con.execute("UPDATE payments SET verify_expires=? WHERE id=?",
                             (verify_until, pid))
     _bg_backup()
-    return {"payment_id": pid, "ref": ref, "amount": b["price"], "currency": b["currency"],
+    return {"payment_id": pid, "ref": ref, "amount": tier["price"], "currency": b["currency"],
+            "tier": tier["id"], "tier_name": tier["name"],
             "bank": b["bank"], "pay_note": b["pay_note"], "verify_until": verify_until}
 
 
@@ -570,8 +692,11 @@ def create_coupon(days: int, code: str = "", max_uses: int = 1) -> dict:
     return {"code": code, "days": days, "max_uses": max_uses}
 
 
-def grant_days(visitor: str, days: int, provider: str = "owner") -> dict:
+def grant_days(visitor: str, days: int, provider: str = "owner", cfg: dict | None = None,
+               tier_id: str = "") -> dict:
     b_plan = "owner grant"
+    if tier_id and cfg is not None:
+        b_plan = tier_by_id(billing_config(cfg), tier_id)["name"]
     with _lock, _connect() as con:
         until = _new_sub(con, visitor, days, b_plan, provider, f"grant-{secrets.token_hex(3)}")
     _bg_backup()
@@ -590,8 +715,10 @@ def _minor_units(amount: str, currency: str) -> int:
     return int(round(major * 100))
 
 
-def stripe_checkout(cfg: dict, visitor: str, email: str, success_url: str) -> dict:
+def stripe_checkout(cfg: dict, visitor: str, email: str, success_url: str,
+                    tier_id: str = "") -> dict:
     b = billing_config(cfg)
+    tier = tier_by_id(b, tier_id)
     if not b["stripe_secret"]:
         raise HTTPException(400, "Stripe isn't configured yet (Settings → Plans & payments).")
     data = {
@@ -602,11 +729,13 @@ def stripe_checkout(cfg: dict, visitor: str, email: str, success_url: str) -> di
         "cancel_url": success_url,
         "line_items[0][quantity]": "1",
         "line_items[0][price_data][currency]": b["currency"].lower(),
-        "line_items[0][price_data][unit_amount]": str(_minor_units(b["price"], b["currency"])),
+        "line_items[0][price_data][unit_amount]": str(_minor_units(tier["price"], b["currency"])),
         "line_items[0][price_data][recurring][interval]": b["interval"],
-        "line_items[0][price_data][product_data][name]": b["plan_name"],
+        "line_items[0][price_data][product_data][name]": tier["name"],
         "subscription_data[metadata][visitor]": visitor,
+        "subscription_data[metadata][tier]": tier["id"],
         "metadata[visitor]": visitor,
+        "metadata[tier]": tier["id"],
     }
     data = {k: v for k, v in data.items() if v is not None}
     r = httpx.post(b["stripe_base"].rstrip("/") + "/v1/checkout/sessions", data=data,
@@ -617,24 +746,27 @@ def stripe_checkout(cfg: dict, visitor: str, email: str, success_url: str) -> di
     with _lock, _connect() as con:
         con.execute("INSERT INTO payments(id, visitor_id, provider, amount, currency, status, "
                     "ref, email, created, paid_at, meta) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    (session["id"], visitor, "stripe", b["price"], b["currency"], "pending",
-                     session["id"], email, time.time(), None, ""))
+                    (session["id"], visitor, "stripe", tier["price"], b["currency"], "pending",
+                     session["id"], email, time.time(), None,
+                     json.dumps({"tier": tier["id"]})))
     return {"url": session["url"], "payment_id": session["id"]}
 
 
-def paystack_checkout(cfg: dict, visitor: str, email: str, success_url: str) -> dict:
+def paystack_checkout(cfg: dict, visitor: str, email: str, success_url: str,
+                      tier_id: str = "") -> dict:
     b = billing_config(cfg)
+    tier = tier_by_id(b, tier_id)
     if not b["paystack_secret"]:
         raise HTTPException(400, "Paystack isn't configured yet (Settings → Plans & payments).")
     if not email or "@" not in email:
         raise HTTPException(400, "Paystack needs your email address for the receipt.")
     data = {
         "email": email,
-        "amount": str(_minor_units(b["price"], b["currency"])),
+        "amount": str(_minor_units(tier["price"], b["currency"])),
         "currency": b["currency"].upper(),
         "callback_url": success_url,
         "reference": f"PS-{visitor[:8]}-{secrets.token_hex(3)}",
-        "metadata": json.dumps({"visitor": visitor}),
+        "metadata": json.dumps({"visitor": visitor, "tier": tier["id"]}),
     }
     r = httpx.post(b["paystack_base"].rstrip("/") + "/transaction/initialize", data=data,
                    headers={"Authorization": f"Bearer {b['paystack_secret']}"}, timeout=30)
@@ -645,8 +777,8 @@ def paystack_checkout(cfg: dict, visitor: str, email: str, success_url: str) -> 
     with _lock, _connect() as con:
         con.execute("INSERT INTO payments(id, visitor_id, provider, amount, currency, status, "
                     "ref, email, created, paid_at, meta) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    (ref, visitor, "paystack", b["price"], b["currency"], "pending", ref, email,
-                     time.time(), None, ""))
+                    (ref, visitor, "paystack", tier["price"], b["currency"], "pending", ref, email,
+                     time.time(), None, json.dumps({"tier": tier["id"]})))
     return {"url": body["data"]["authorization_url"], "payment_id": ref}
 
 
@@ -659,7 +791,12 @@ def _activate_from_payment(cfg: dict, provider: str, ref: str, meta_visitor: str
         if row["status"] == "paid":
             return {"ok": True, "already": True}
         visitor = meta_visitor or row["visitor_id"]
-        until = _new_sub(con, visitor, INTERVAL_DAYS.get(b["interval"], 30), b["plan_name"],
+        try:
+            meta = json.loads(row["meta"] or "{}")
+        except ValueError:
+            meta = {}
+        tier = tier_by_id(b, meta.get("tier", ""))
+        until = _new_sub(con, visitor, INTERVAL_DAYS.get(b["interval"], 30), tier["name"],
                          provider, ref)
         con.execute("UPDATE payments SET status='paid', paid_at=? WHERE id=?",
                     (time.time(), row["id"]))
@@ -788,7 +925,11 @@ async def billing_paid(request: Request):
         abuse_event(request, "paid_limit", f"visitor {vid[:12]}")
         raise HTTPException(429, f"You already have payment details - check the paywall card "
                                  f"or try again in {retry // 60 + 1} min.")
-    return make_manual_payment(cfg, vid)
+    try:
+        body = await request.json()
+    except ValueError:
+        body = {}
+    return make_manual_payment(cfg, vid, str(body.get("tier") or ""))
 
 
 @router.post("/api/billing/coupon")
@@ -811,11 +952,12 @@ async def billing_checkout(request: Request):
     body = await request.json()
     provider = str(body.get("provider") or "")
     email = str(body.get("email") or "").strip()
+    tier = str(body.get("tier") or "")
     success = str(body.get("success_url") or str(request.base_url).rstrip("/")) + "/?paid=1"
     if provider == "stripe":
-        return stripe_checkout(cfg, vid, email, success)
+        return stripe_checkout(cfg, vid, email, success, tier)
     if provider == "paystack":
-        return paystack_checkout(cfg, vid, email, success)
+        return paystack_checkout(cfg, vid, email, success, tier)
     raise HTTPException(400, "Unknown payment provider.")
 
 
@@ -906,7 +1048,8 @@ async def billing_grant(request: Request):
     _require_admin(request)
     body = await request.json()
     return grant_days(str(body.get("visitor") or ""), int(body.get("days") or 30),
-                      str(body.get("provider") or "owner"))
+                      str(body.get("provider") or "owner"), _cfg(),
+                      str(body.get("tier") or ""))
 
 
 # Late-bound helpers (app.py injects them so this module stays import-safe).
