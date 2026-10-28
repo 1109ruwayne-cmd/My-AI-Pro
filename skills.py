@@ -306,6 +306,124 @@ def web_search(query: str = "", max_results: int = 5, **_) -> str:
 
 
 # --------------------------------------------------------------------- registry
+# ------------------------------------------------------------------ trust desk
+_SA_VAT_RE = re.compile(r"^4\d{9}$")
+_TODAY = lambda: _dt.date.today().strftime("%d %B %Y")
+
+
+def trust_desk(action: str = "", bureau: str = "", creditor: str = "", account: str = "",
+               entry: str = "", grounds: str = "", name: str = "", id_number: str = "",
+               address: str = "", contact: str = "", company: str = "",
+               company_reg: str = "", purpose: str = "", vat_number: str = "") -> str:
+    """South African credit & trust helpers - guidance, letters, format checks.
+    Lawful and defensive only: no bureau pulls, no register scraping; official
+    channels and drafted documents the user sends themselves."""
+    a = (action or "").strip().lower()
+    if a == "credit_rights":
+        return ("SA credit rights summary (National Credit Act 34 of 2005):\n"
+                "- ONE FREE credit report every 12 months from EACH bureau "
+                "(TransUnion, Experian, Compuscan, XDS) - s72; own checks are soft "
+                "enquiries and never lower the score.\n"
+                "- Adverse listings/enquiries drop off after 1 year; judgments after "
+                "5 years or once paid/rescinded; paid-up write-offs removed under s71A; "
+                "prescribed debt (±3y, unacknowledged) may not be listed or collected.\n"
+                "- Disputes (s72(3)) are FREE: bureau must investigate in 20 business "
+                "days (Reg 17(4)), mask the item while checking (NCR guideline Dec 2025) "
+                "and remove what the source cannot verify.\n"
+                "- Escalation: National Financial Ombud 0861 662 837 / "
+                "ombud@creditombud.org.za, then NCR 0860 627 627 / complaints@ncr.org.za.\n"
+                "- Lenders must be NCR-registered (NCRCP number on ncr.org.za).")
+    if a == "dispute_letter":
+        if not (bureau and name):
+            return "dispute_letter needs at least: bureau, name (plus id_number, " \
+                   "creditor, entry, grounds, contact for a complete letter)."
+        return (f"{_TODAY()}\n\nTo: {bureau} - Disputes Desk\n"
+                f"RE: DISPUTE OF INCORRECT INFORMATION - SECTION 72(3), NATIONAL CREDIT ACT 34 OF 2005\n\n"
+                f"I, {name} (ID number {id_number or '[ID number]'}), of {address or '[address]'}, "
+                f"contactable at {contact or '[contact]'}, dispute the following entry on my "
+                f"credit record:\n"
+                f"- Credit provider: {creditor or '[creditor]'}\n"
+                f"- Account number: {account or '[account number]'}\n"
+                f"- Entry disputed: {entry or '[describe the listing]'}\n"
+                f"- Grounds: {grounds or '[e.g. settled / paid up / prescribed / not my account]'}\n"
+                f"Supporting proof is attached: [paid-up letter / settlement agreement / "
+                f"rescission order / statements].\n\n"
+                "In terms of s72(3) and Regulation 17(4) you are required to investigate within "
+                "20 business days; pending the outcome the disputed item must be masked in line "
+                "with the NCR credible-evidence guideline (December 2025). Should the source be "
+                "unable to verify the information, it must be removed and I request written "
+                "confirmation of the outcome.\n"
+                "Should the dispute not be resolved, I will escalate to the National Financial "
+                "Ombud and the National Credit Regulator (Form 29).\n\n"
+                f"Yours faithfully,\n{name}")
+    if a == "paid_up_letter":
+        if not (creditor and name):
+            return "paid_up_letter needs at least: creditor, name (plus account, id_number, contact)."
+        return (f"{_TODAY()}\n\nTo: {creditor} - Accounts Department\n"
+                f"RE: REQUEST FOR PAID-UP LETTER / CONFIRMATION OF SETTLEMENT\n\n"
+                f"I, {name} (ID number {id_number or '[ID number]'}, contact {contact or '[contact]'}), "
+                f"request written confirmation that account {account or '[account number]'} has been "
+                "settled in full, stating the settlement date and a zero balance, for use in a "
+                "credit-bureau dispute under s72(3) of the National Credit Act and, where "
+                "applicable, removal of the listing under s71A.\n"
+                "Kindly provide the letter within 10 business days.\n\n"
+                f"Yours faithfully,\n{name}")
+    if a == "consent_form":
+        if not (name and company):
+            return "consent_form needs at least: name, company (plus id_number, purpose, company_reg)."
+        return ("POPIA CONSENT - CREDIT / RECORDS CHECK\n\n"
+                f"I, {name} (ID number {id_number or '[ID number]'}), hereby consent in terms of "
+                f"section 11 of the Protection of Personal Information Act 4 of 2013 that "
+                f"{company} (registration {company_reg or '[registration number]'}) may obtain and "
+                f"process my credit record and related personal information from registered credit "
+                f"bureaus and public registers, solely for the purpose of: "
+                f"{purpose or '[state the specific lawful purpose]'}.\n"
+                "The processing is limited to the minimum information necessary; the information "
+                "will not be used for any other purpose nor shared further without my separate "
+                "consent, save as required by law. I may withdraw this consent in writing at any "
+                "time, and I may request the record of what was processed.\n"
+                f"Signed at ____________ on {_TODAY()}.\n\n"
+                f"_______________________\n{name} (data subject)\n\n"
+                "Accepted for the responsible party:\n_______________________\n"
+                f"{company} - representative")
+    if a == "ncr_lender":
+        return ("How to verify a lender is legal (National Credit Regulator):\n"
+                f"- Lender named: {company or '[lender name]'} "
+                f"(registration claimed: {company_reg or '[NCRCP number]'}).\n"
+                "- Every lawful credit provider carries an NCRCP registration number on adverts "
+                "and contracts; verify it on the NCR register at ncr.org.za (Registers).\n"
+                "- Red flags: no NCRCP number; cash 'initiation fees' upfront; interest/fees above "
+                "NCA caps; no written contract; holding ID books, bank cards or SASSA cards.\n"
+                "- Unregistered lending is a criminal matter: NCR 0860 627 627 / "
+                "complaints@ncr.org.za; loan-shark conduct also to SAPS.\n"
+                "- My AI Pro performs no bureau pull here - register checks are public and free.")
+    if a == "cipc_company":
+        return ("How to verify a company (CIPC):\n"
+                f"- Company named: {company or '[company name]'} "
+                f"(registration claimed: {company_reg or '[registration number]'}).\n"
+                "- Search the public register at eservices.cipc.co.za (or BizPortal): status must "
+                "read Active; note directors and registration date.\n"
+                "- Ask the counterparty for a current registration certificate (COR) and match "
+                "number, name and directors; invoices should show the same registration number.\n"
+                "- Red flags: 'In deregistration' status; number/name mismatch; refused certificate.\n"
+                "- Company status is public register data - no consent needed to look.")
+    if a == "sars_vat":
+        v = re.sub(r"\s", "", vat_number or "")
+        ok = bool(_SA_VAT_RE.match(v))
+        line = (f"- VAT number supplied: {v or '[none]'} -> format "
+                + ("VALID pattern (10 digits starting with 4)." if ok
+                   else "INVALID - a genuine SA VAT registration number is 10 digits starting "
+                        "with 4. Treat invoices claiming VAT with suspicion.")) if v else \
+               "- Supply vat_number to validate the format (10 digits, starts with 4)."
+        return ("SARS VAT vendor check:\n" + line + "\n"
+                "- Format is only the first gate: final confirmation via SARS (eFiling VAT vendor "
+                "search or a VAT registration confirmation letter from the vendor).\n"
+                "- A vendor must show name, address, VAT number and tax period on tax invoices; "
+                "claiming input VAT on a fake number is a SARS risk for the buyer.")
+    return ("trust_desk actions: credit_rights, dispute_letter, paid_up_letter, consent_form, "
+            "ncr_lender, cipc_company, sars_vat.")
+
+
 SKILLS = {
     "calculator": {
         "label": "Calculator",
@@ -374,6 +492,31 @@ SKILLS = {
                            "max_results": {"type": "integer", "description": "1-10, default 5"}},
                        "required": ["query"]},
         "fn": web_search},
+    "trust_desk": {
+        "label": "SA Trust Desk",
+        "description": "South African credit & trust helpers (lawful, defensive): consumer credit "
+                       "rights (free s72 reports, listing clocks, dispute deadlines), draft an NCA "
+                       "s72(3) dispute letter, a paid-up letter request or a POPIA consent form, "
+                       "validate a SARS VAT number format, and guide official NCR lender / CIPC "
+                       "company register checks. Use for credit reports, disputes, lender "
+                       "legitimacy, company or VAT trust checks in South Africa.",
+        "parameters": {"type": "object",
+                       "properties": {
+                           "action": {"type": "string",
+                                      "enum": ["credit_rights", "dispute_letter",
+                                               "paid_up_letter", "consent_form",
+                                               "ncr_lender", "cipc_company", "sars_vat"]},
+                           "bureau": {"type": "string", "description": "credit bureau name"},
+                           "creditor": {"type": "string"}, "account": {"type": "string"},
+                           "entry": {"type": "string", "description": "the disputed listing"},
+                           "grounds": {"type": "string", "description": "why it is wrong"},
+                           "name": {"type": "string"}, "id_number": {"type": "string"},
+                           "address": {"type": "string"}, "contact": {"type": "string"},
+                           "company": {"type": "string"}, "company_reg": {"type": "string"},
+                           "purpose": {"type": "string", "description": "consent purpose"},
+                           "vat_number": {"type": "string"}},
+                       "required": ["action"]},
+        "fn": trust_desk},
 }
 
 

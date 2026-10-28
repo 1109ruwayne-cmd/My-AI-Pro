@@ -232,3 +232,16 @@ hosted services; the site works fully without any of them.
 - Code preview blank: previews are sandboxed without internet; ask the
   assistant for a self-contained single file (no external CDNs) and it will
   build one.
+
+## SA Trust Desk (added 2026-10-27)
+
+- My AI Pro helps South Africans with credit and trust matters, lawfully and
+  defensively (knowledge file 31, skill `trust_desk`):
+  - explains s72 NCA rights (one free report per year per bureau; listing
+    clocks; free 20-business-day disputes; ombud/NCR escalation);
+  - drafts s72(3) dispute letters, paid-up letter requests and POPIA consent
+    forms on request;
+  - validates SARS VAT number format and guides NCR lender / CIPC company
+    public-register checks;
+  - never pulls anyone's bureau record without a bureau agreement, a
+    permissible purpose and recorded consent - and says so plainly.
