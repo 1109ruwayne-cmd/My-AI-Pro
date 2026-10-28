@@ -314,7 +314,8 @@ _TODAY = lambda: _dt.date.today().strftime("%d %B %Y")
 def trust_desk(action: str = "", bureau: str = "", creditor: str = "", account: str = "",
                entry: str = "", grounds: str = "", name: str = "", id_number: str = "",
                address: str = "", contact: str = "", company: str = "",
-               company_reg: str = "", purpose: str = "", vat_number: str = "") -> str:
+               company_reg: str = "", purpose: str = "", vat_number: str = "",
+               body: str = "") -> str:
     """South African credit & trust helpers - guidance, letters, format checks.
     Lawful and defensive only: no bureau pulls, no register scraping; official
     channels and drafted documents the user sends themselves."""
@@ -420,8 +421,97 @@ def trust_desk(action: str = "", bureau: str = "", creditor: str = "", account: 
                 "search or a VAT registration confirmation letter from the vendor).\n"
                 "- A vendor must show name, address, VAT number and tax period on tax invoices; "
                 "claiming input VAT on a fake number is a SARS risk for the buyer.")
+    if a == "prof_register":
+        b = (body or "").strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+        if b in ("sacpcmp", "pm", "projectmanager", "projectmanagement", "construction"):
+            return ("SACPCMP - SA Council for the Project & Construction Management Professions "
+                    "(statutory, Act 48 of 2000):\n"
+                    "- FREE public check: sacpcmp.org.za -> 'Registered Person Search' -> "
+                    "'Project & Construction Management' (search.mymembership.co.za). Search the "
+                    "person's name; a live hit = currently registered and in good standing.\n"
+                    "- Categories: Pr.CM / Pr.CPM (professional), Candidate CM / Candidate CPM, "
+                    "Professional Construction Mentor. Pr.CPM is a SAQA-recognised designation "
+                    "(cross-check at pbdesig.saqa.org.za, designation 498).\n"
+                    "- Genuine certificates carry a QR code linking to SACPCMP live validation, "
+                    "and validity runs April-March (their financial year). RED FLAG: an end date "
+                    "in any month other than March means the certificate is fake.\n"
+                    "- Since 1 Aug 2025: Pr.CPM/Pr.CM need NQF 8 (480 credits, SAQA-accredited; "
+                    "limited dispensation accepts NQF 7), 4-10 years logged experience, annual CPD "
+                    "and fees; qualifications are verified through MIE.\n"
+                    "- To REGISTER: mypcm.sacpcmp.org.za portal - certified ID, certified "
+                    "qualifications, detailed CV, Annexure A1 (project profile) + A2 (project "
+                    "report); annual registration fee, certificate renews each April.\n"
+                    "- PMSA (pmsa.org.za) is a voluntary professional body - membership there is "
+                    "NOT statutory registration. Foreign PM certs (PMP/PRINCE2) verify via PMI "
+                    "(pmi.org Credly badge) or PeopleCert (peoplecert.org verification).")
+        if b in ("sanc", "nurse", "nursing", "midwife"):
+            return ("SANC - South African Nursing Council (statutory, Nursing Act 33 of 2005):\n"
+                    "- FREE public check: sanc.co.za/eRegister.aspx - accept the conditions, "
+                    "search by SANC reference number or SA ID number. The eRegister is a legal "
+                    "copy of the official register (s35) and is the authoritative check.\n"
+                    "- No hit on the eRegister = not registered -> may NOT be employed as a nurse "
+                    "(SANC directive; employers must refuse).\n"
+                    "- From July 2025 annual practising certificates (APCs) are emailed as "
+                    "encrypted PDFs with a QR code; employers MUST verify any APC against the "
+                    "eRegister before accepting it.\n"
+                    "- 2026 annual fees (gazetted): R870 registered nurse/midwife, R520 enrolled "
+                    "nurse/midwife, R370 enrolled nursing auxiliary - normally paid by the "
+                    "employer (Resolution 3 of 2019). Restoration of lapsed registration costs "
+                    "the fee plus all arrears.\n"
+                    "- Need an official written verification/extract? SANC offers it for a fee "
+                    "(VERIFEE / EXRFEE codes on sanc.co.za fee list) - the free eRegister check "
+                    "is enough for most employment purposes.")
+        if b in ("ahpra", "nmba", "australia", "nurseau"):
+            return ("AHPRA / NMBA - Australia's national health practitioner register:\n"
+                    "- FREE public check: ahpra.gov.au -> 'Look up a practitioner' (Registers of "
+                    "Practitioners). Covers nursing & midwifery (NMBA) plus 15 other professions "
+                    "(medical, pharmacy, psychology, paramedicine...). Search by name or AHPRA "
+                    "registration number.\n"
+                    "- Read the WHOLE record: registration status, expiry (nurses/midwives renew "
+                    "by 31 May each year), registration type, and any conditions, undertakings "
+                    "or endorsements. Not on the register = not registered to practise in "
+                    "Australia - no exceptions, and old-style numbers don't work.\n"
+                    "- Don't trust a printed entry or PDF certificate: the online register is "
+                    "the only current source (AHPRA says so explicitly). Queries: 1300 419 495.\n"
+                    "- Internationally qualified nurses (e.g. South Africans moving over) go "
+                    "through the IQNM self-check + qualification assessment before applying via "
+                    "the AHPRA practitioner portal; a certificate of good standing from the home "
+                    "council (SANC for SA) is required.")
+        if b in ("sars", "sarstp", "tax", "taxpractitioner"):
+            return ("SARS tax practitioner check (Tax Administration Act s240/240A):\n"
+                    "- FREE public check: SARS eFiling Tax Practitioner Query - "
+                    "https://secure.sarsefiling.co.za/TaxPractitionerQuery.aspx. Ask the person "
+                    "for their PR number (always starts with 'PR') and confirm it shows "
+                    "registered/active.\n"
+                    "- A legal tax practitioner is registered with BOTH a Recognised Controlling "
+                    "Body (RCB - e.g. SAIT, SAICA, ACCA, CIMA; official list on sars.gov.za) AND "
+                    "SARS. Registration must happen within 21 business days of first giving tax "
+                    "advice or completing returns for others.\n"
+                    "- Double-check membership on the claimed RCB's own site (e.g. SAIT member "
+                    "search) - the two registers must agree.\n"
+                    "- RED FLAGS: no PR number, refuses to name an RCB, offers to 'fix' a refund "
+                    "for an upfront cash fee, uses an unbranded gmail/hotmail address for "
+                    "practice correspondence, or asks you to sign a blank RAV01/ITR12.\n"
+                    "- Charged for tax help by an unregistered person? Report to SARS: "
+                    "Reportingunprofessionalconduct@sars.gov.za (unregistered practice is an "
+                    "offence; SARS issued fresh scam warnings in July 2026).\n"
+                    "- To REGISTER as a practitioner: join an RCB first (RCB initiates on "
+                    "eFiling), complete the RAV01, select the RCB and submit; SARS validates and "
+                    "issues the PR number via eFiling correspondence.")
+        return ("prof_register checks professional registrations via free official public "
+                "registers. Set body to one of:\n"
+                "- sacpcmp: project/construction managers (SA statutory council)\n"
+                "- sanc: nurses & midwives (SA)\n"
+                "- ahpra: nurses & all health practitioners (Australia, NMBA)\n"
+                "- sars: tax practitioners (SA, PR number)\n"
+                "Other SA statutory bodies all keep free public registers on their official "
+                "sites: ECSA (engineers), SAICA (accountants/auditors), HPCSA (health "
+                "professions, iRegister), SACE (educators), PPRA (property practitioners), "
+                "FSCA (financial service providers / FSPs), LPC (attorneys), CIDB (construction "
+                "contractors), SAQA designations (pbdesig.saqa.org.za). Rule: verify on the "
+                "register itself - certificates, screenshots and CV claims are not proof.")
     return ("trust_desk actions: credit_rights, dispute_letter, paid_up_letter, consent_form, "
-            "ncr_lender, cipc_company, sars_vat.")
+            "ncr_lender, cipc_company, sars_vat, prof_register.")
 
 
 SKILLS = {
@@ -498,14 +588,25 @@ SKILLS = {
                        "rights (free s72 reports, listing clocks, dispute deadlines), draft an NCA "
                        "s72(3) dispute letter, a paid-up letter request or a POPIA consent form, "
                        "validate a SARS VAT number format, and guide official NCR lender / CIPC "
-                       "company register checks. Use for credit reports, disputes, lender "
-                       "legitimacy, company or VAT trust checks in South Africa.",
+                       "company register checks. Also prof_register: how to verify professional "
+                       "registrations on free official public registers - SACPCMP project & "
+                       "construction managers, SANC nurses/midwives (SA), AHPRA/NMBA nurses "
+                       "(Australia), SARS tax practitioners (PR numbers) - plus registration "
+                       "routes, fees and forgery red flags. Use for credit reports, disputes, "
+                       "lender legitimacy, company or VAT trust checks, and verifying whether a "
+                       "project manager, nurse, accountant or tax practitioner is really "
+                       "registered.",
         "parameters": {"type": "object",
                        "properties": {
                            "action": {"type": "string",
                                       "enum": ["credit_rights", "dispute_letter",
                                                "paid_up_letter", "consent_form",
-                                               "ncr_lender", "cipc_company", "sars_vat"]},
+                                               "ncr_lender", "cipc_company", "sars_vat",
+                                               "prof_register"]},
+                           "body": {"type": "string",
+                                    "description": "for prof_register: sacpcmp | sanc | ahpra "
+                                                   "(NMBA Australia) | sars (tax practitioner) | "
+                                                   "blank for the full register list"},
                            "bureau": {"type": "string", "description": "credit bureau name"},
                            "creditor": {"type": "string"}, "account": {"type": "string"},
                            "entry": {"type": "string", "description": "the disputed listing"},

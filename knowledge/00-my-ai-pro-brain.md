@@ -245,3 +245,11 @@ hosted services; the site works fully without any of them.
     public-register checks;
   - never pulls anyone's bureau record without a bureau agreement, a
     permissible purpose and recorded consent - and says so plainly.
+
+## Professional Register Checks (added 2026-10-28)
+Module 32 + trust_desk action `prof_register`: how to verify project managers (SACPCMP -
+statutory; March-end-date forgery rule; QR validation), nurses in SA (SANC free eRegister),
+nurses in Australia (AHPRA/NMBA free public register), SARS tax practitioners (eFiling Tax
+Practitioner Query, PR numbers, RCB double-registration) - plus the table of other free
+official registers (ECSA, SAICA, IRBA, HPCSA, SACE, PPRA, FSCA, LPC, CIDB, SAQA
+designations). Public lookups only; never submit to these systems without a recorded mandate.
