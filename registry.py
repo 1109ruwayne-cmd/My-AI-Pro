@@ -23,6 +23,7 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 import qrcode
@@ -513,25 +514,52 @@ def register(app, require_admin, bank_info) -> None:
                         media_type="text/html; charset=utf-8")
 
     @app.get("/verify/{code}", response_class=HTMLResponse)
-    def verify_page(code: str):
+    def verify_page(code: str, request: Request):
         c = _rows("SELECT * FROM certs WHERE code=?", (code.upper(),))
         cert = c[0] if c else None
         state = "VOID" if (cert and cert["voided"]) else ("VALID" if cert else "NOT FOUND")
         colour = "#1f9468" if state == "VALID" else "#cf4040"
+        base = str(request.base_url).rstrip("/")
+        share_txt = quote(f"Verify certificate {code.upper()} ({state}) on the My AI Pro registry: "
+                          f"{base}/verify/{code.upper()}")
+        og_holder = cert["holder"] if cert else "unknown holder"
         body = ""
+        actions = ""
         if cert:
             body = (f"<p><b>Holder:</b> {cert['holder']}</p><p><b>Certificate:</b> {cert['ctype']}</p>"
                     f"<p><b>Issued:</b> {cert['issued_on'] or '-'} &nbsp; <b>Expires:</b> {cert['expires_on'] or 'no expiry'}</p>"
                     f"<p><b>Scope:</b> {cert['body'] or '-'}</p>")
+            actions = f"""<div class="acts"><a class="act" href="/cert/{cert['code']}/report.pdf">PDF verification report</a>
+<a class="act wa" href="https://wa.me/?text={share_txt}" target="_blank" rel="noopener">WhatsApp share</a>
+<button class="act" id="embbtn" type="button">Embed verify button</button></div>
+<div class="embbox" id="embbox" hidden><code id="embcode">&lt;script src=&quot;{base}/static/verify-embed.js&quot; data-code=&quot;{cert['code']}&quot;&gt;&lt;/script&gt;</code>
+<button id="embcopy" type="button">Copy</button><div class="embcap">Paste on any website - shows a live verification badge for this credential.</div></div>"""
         return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify {code}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify {code.upper()} - {state}</title>
+<meta name="description" content="Live credential verification: {code.upper()} ({state}), holder {og_holder}. My AI Pro registry, Ruwayne Campher, South Africa.">
+<meta property="og:title" content="Certificate {code.upper()} - {state}">
+<meta property="og:description" content="Live verification from the My AI Pro registry. Holder: {og_holder}.">
+<meta property="og:url" content="{base}/verify/{code.upper()}"><meta property="og:type" content="website">
 <style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f7fc;font:16px/1.7 system-ui,sans-serif;color:#181b2e}}
 main{{max-width:560px;margin:24px;background:#fff;border:1px solid #e3e4ef;border-radius:20px;padding:28px;box-shadow:0 10px 28px rgba(20,22,44,.07)}}
 h1{{font-size:20px;margin:0 0 4px}} .st{{display:inline-block;padding:3px 12px;border-radius:99px;color:#fff;background:{colour};font-weight:700;font-size:13px}}
-code{{font-family:ui-monospace,monospace;background:#f4f4fa;border-radius:6px;padding:2px 6px}}</style></head>
-<body><main><h1>Certificate verification</h1><p><code>{code.upper()}</code> &nbsp;<span class="st">{state}</span></p>{body}
+code{{font-family:ui-monospace,monospace;background:#f4f4fa;border-radius:6px;padding:2px 6px}}
+.acts{{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}}
+.act{{font:600 13px system-ui;padding:8px 14px;border-radius:10px;border:1px solid #5b5bd6;color:#5b5bd6;background:#fff;text-decoration:none;cursor:pointer}}
+.act.wa{{border-color:#1f9468;color:#1f9468}}
+.embbox{{margin-top:10px;background:#f4f4fa;border:1px solid #e3e4ef;border-radius:12px;padding:12px}}
+.embbox code{{display:block;word-break:break-all;font-size:12px;background:#fff;border:1px solid #e3e4ef;padding:8px}}
+#embcopy{{margin-top:8px;font:600 12px system-ui;padding:6px 12px;border-radius:8px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
+.embcap{{color:#64698a;font-size:12px;margin-top:6px}}</style></head>
+<body><main><h1>Certificate verification</h1><p><code>{code.upper()}</code> &nbsp;<span class="st">{state}</span></p>{body}{actions}
 <p style="color:#64698a;font-size:13px">Issued under the name of Ruwayne Campher - My AI Pro Registry.
-Questions: 1109ruwayne@gmail.com</p></main></body></html>""")
+Questions: 1109ruwayne@gmail.com</p></main>
+<script>
+var b=document.getElementById('embbtn'),x=document.getElementById('embbox'),cp=document.getElementById('embcopy');
+if(b&&x){{b.addEventListener('click',function(){{x.hidden=!x.hidden;b.textContent=x.hidden?'Embed verify button':'Hide embed code';}});}}
+if(cp){{cp.addEventListener('click',function(){{var t=document.getElementById('embcode').textContent;
+(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(function(){{cp.textContent='Copied!';}},function(){{cp.textContent='Select and copy';}});}});}}
+</script></body></html>""")
 
     @app.get("/cert/{code}", response_class=HTMLResponse)
     def cert_page(code: str):
@@ -687,6 +715,73 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
                          "digestFields": ["code", "holder", "ctype", "issued_on", "expires_on"],
                          "digest": _fingerprint(cert)}
         return JSONResponse(cred, headers=_CORS)
+
+    @app.get("/cert/{code}/report.pdf")
+    def cert_report_pdf(code: str, request: Request):
+        """Live PDF verification report - printable proof for employers and auditors."""
+        import io as _io
+        from reportlab.pdfgen import canvas as _canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.utils import ImageReader
+        rows = _rows("SELECT code,holder,ctype,issued_on,expires_on,voided FROM certs WHERE code=?", (code.upper(),))
+        if not rows:
+            raise HTTPException(404, "Unknown credential code.")
+        c = rows[0]
+        base = str(request.base_url).rstrip("/")
+        url = base + "/verify/" + c["code"]
+        today = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 7200))
+        status = "VOIDED" if c["voided"] else ("EXPIRED" if c["expires_on"] and c["expires_on"] < today else "VALID")
+        stamp = time.strftime("%d %B %Y %H:%M SAST", time.gmtime(time.time() + 7200))
+        png = _io.BytesIO()
+        qrcode.make(url).save(png, format="PNG")
+        png.seek(0)
+        buf = _io.BytesIO()
+        w, h = A4
+        p = _canvas.Canvas(buf, pagesize=A4)
+        p.saveState()                                     # watermark underneath everything
+        p.setFillColorRGB(0.88, 0.88, 0.96)
+        p.setFont("Helvetica-Bold", 44)
+        p.translate(w / 2, h / 2 - 40)
+        p.rotate(28)
+        p.drawCentredString(0, 0, "MY AI PRO VERIFICATION")
+        p.restoreState()
+        p.setFont("Helvetica-Bold", 19)
+        p.setFillColorRGB(0.36, 0.36, 0.84)
+        p.drawString(50, h - 70, "MY AI PRO - CREDENTIAL VERIFICATION REPORT")
+        p.setFont("Helvetica", 10)
+        p.setFillColorRGB(0.30, 0.31, 0.42)
+        p.drawString(50, h - 88, "Generated from the live registry on " + stamp)
+        p.setFont("Helvetica-Bold", 13)
+        if status == "VALID":
+            p.setFillColorRGB(0.05, 0.55, 0.25)
+        else:
+            p.setFillColorRGB(0.72, 0.10, 0.10)
+        p.drawString(50, h - 118, "Verification status: " + status)
+        p.setFillColorRGB(0.12, 0.13, 0.20)
+        y = h - 150
+        for label, value in [("Holder", c["holder"]), ("Credential", c["ctype"]),
+                             ("Certificate number", c["code"]),
+                             ("Issued on", c["issued_on"] or "-"),
+                             ("Valid until", c["expires_on"] or "No expiry date"),
+                             ("Fingerprint (SHA-256)", _fingerprint(c))]:
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(50, y, label + ":")
+            p.setFont("Helvetica", 11)
+            p.drawString(190, y, str(value))
+            y -= 22
+        p.drawImage(ImageReader(png), w - 160, h - 200, width=110, height=110)
+        p.setFont("Helvetica", 8)
+        p.drawCentredString(w - 105, h - 214, "Scan for live verification")
+        p.setFont("Helvetica", 10)
+        p.drawString(50, 92, "Independent verification page: " + url)
+        p.drawString(50, 78, "Machine-readable API: " + base + "/api/reg/verify/" + c["code"])
+        p.setFont("Helvetica-Oblique", 9)
+        p.drawString(50, 56, "This report is generated live from the registry. Status can change (renewal, revocation) -")
+        p.drawString(50, 44, "always confirm at the verification URL above. (c) 2026 Ruwayne Campher - My AI Pro.")
+        p.showPage()
+        p.save()
+        return Response(content=buf.getvalue(), media_type="application/pdf",
+                        headers={"Content-Disposition": 'inline; filename="MyAIPro-verify-' + c["code"] + '.pdf"'})
 
     @app.get("/cert/{code}/qr.svg")
     def cert_qr(code: str, request: Request):
