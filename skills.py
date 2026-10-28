@@ -11,8 +11,32 @@ Skills shipped with this module:
     text_tools        counts, case, reverse, hashes, base64, slug
     random_generator  numbers, dice, coin, uuid, passwords
     web_search        live results from DuckDuckGo (no API key needed)
+    trust_desk        SA Trust Desk - credit rights (NCA s72), dispute/paid-up/
+                      POPIA-consent letters, VAT format check, NCR lender & CIPC
+                      company register guides, prof_register (verify project
+                      managers SACPCMP, nurses SANC/AHPRA-NMBA, SARS tax
+                      practitioners - free official public registers)
+    hr_file           OWNER-ONLY Employee Trust Files - employees with SARS tax
+                      numbers (10-digit format + modulus-10 check, PAYE/VAT
+                      discrimination), certificates with verification status &
+                      expiry flags, POPIA consent tracking (hrdesk.py -> hr.db).
+                      Hidden from visitors: tool_defs(owner=False) omits it and
+                      run() refuses non-owner calls.
+    weather           forecasts via Open-Meteo (no key)
+    exchange_rates    live currency rates
+    dictionary        definitions via dictionaryapi.dev
+    wikipedia_summary page summaries via the Wikipedia API
+    qr_code           QR codes as SVG data URIs
+    finance_calculator loans, compound interest, investments
+    json_tool         validate / format / minify JSON
+    regex_tester      test regular expressions with matches explained
+    timezone_convert  convert times between timezones
+    url_tool          parse, join and encode URLs
+    password_strength audit password strength locally (nothing is transmitted)
 
 Owner can switch the whole module off in Settings (config "skills_enabled").
+Owner-only skills (hr_file) are only offered when the request proved the owner
+password - see app.py chat() -> stream_answer(owner=...) -> _answer_with_tools.
 """
 import ast
 import base64

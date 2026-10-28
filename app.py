@@ -802,6 +802,17 @@ def selfheal_status(request: Request):
             "watchdog_seconds": selfheal._interval}
 
 
+@app.get("/api/skills")
+def skills_status(request: Request):
+    """Owner-gated live inventory of the Agent Skills actually offered to the model."""
+    require_admin(request)
+    return {"skills": [{"id": k, "label": v["label"], "owner_only": bool(v.get("owner_only"))}
+                       for k, v in skills.SKILLS.items()],
+            "visitor_tool_count": len(skills.tool_defs(owner=False)),
+            "owner_tool_count": len(skills.tool_defs(owner=True)),
+            "enabled": skills.enabled(load_config())}
+
+
 @app.post("/api/selfheal/run")
 def selfheal_run(request: Request):
     """Owner-triggered deep diagnostics: checks and safely repairs what it can."""
