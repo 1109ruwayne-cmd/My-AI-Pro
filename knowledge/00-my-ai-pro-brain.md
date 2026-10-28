@@ -253,3 +253,13 @@ nurses in Australia (AHPRA/NMBA free public register), SARS tax practitioners (e
 Practitioner Query, PR numbers, RCB double-registration) - plus the table of other free
 official registers (ECSA, SAICA, IRBA, HPCSA, SACE, PPRA, FSCA, LPC, CIDB, SAQA
 designations). Public lookups only; never submit to these systems without a recorded mandate.
+
+## Employee Trust Files (added 2026-10-28)
+Module 33 + OWNER-ONLY skill `hr_file` (hrdesk.py -> hr.db): store employees (name, ID,
+position, SARS tax number, POPIA consent) and their certificates (body, number, dates,
+status pending/verified/rejected/expired, note). Tax numbers auto format-checked:
+personal = 10 digits starting 0/1/2/3/9, employer PAYE = starts 7, VAT (starts 4)
+rejected, modulus-10 check digit flag. NEVER pull from SARS - employee supplies the
+number, IT150/IRP5 is the proof. Every certificate comes back with its free official
+verification channel (module 32). Owner-only gating: the skill is hidden from visitors'
+tool lists and refuses non-owner calls.

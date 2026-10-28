@@ -28,6 +28,8 @@ import zoneinfo
 
 import httpx
 
+import hrdesk
+
 VERSION = 1
 
 
@@ -514,6 +516,45 @@ def trust_desk(action: str = "", bureau: str = "", creditor: str = "", account: 
             "ncr_lender, cipc_company, sars_vat, prof_register.")
 
 
+# ------------------------------------------------------------- employee files
+def hr_file(action: str = "", employee: str = "", name: str = "", id_number: str = "",
+            position: str = "", tax_number: str = "", consent: str = "", notes: str = "",
+            credential: str = "", body: str = "", number: str = "", issued: str = "",
+            expires: str = "", status: str = "", note: str = "") -> str:
+    """Owner-only employee trust files (server-side, hr.db). Nothing is pulled from SARS
+    or institutions: tax numbers are format-checked and every certificate comes back with
+    the free official channel to verify it by hand, with the employee's POPIA consent."""
+    a = (action or "").strip().lower().replace(" ", "_")
+    who = (employee or name or "").strip()
+    if a in ("add_employee", "add", "new_employee", "save_employee"):
+        r = hrdesk.add_employee(who, id_number=id_number, position=position,
+                                tax_number=tax_number, consent=consent, notes=notes)
+    elif a in ("add_certificate", "add_cert", "certificate", "cert", "add_credential"):
+        r = hrdesk.add_certificate(who, credential, body=body, number=number,
+                                   issued=issued, expires=expires)
+    elif a in ("lookup", "file", "get", "retrieve", "show", "employee_file"):
+        if not who:
+            return "lookup needs the employee name (employee=...). Or use action=list."
+        r = hrdesk.employee_file(who)
+    elif a in ("list", "all", "employees"):
+        r = {"employees": hrdesk.list_employees()}
+    elif a in ("update_certificate", "set_status", "status"):
+        r = hrdesk.set_cert_status(who, credential, status, note=note)
+    elif a in ("remove", "delete", "remove_employee"):
+        r = hrdesk.remove_employee(who)
+    elif a == "tax_check":
+        ok, kind, msg = hrdesk.check_tax_number(tax_number)
+        r = {"ok": ok, "kind": kind, "check": msg}
+    else:
+        return ("hr_file actions: add_employee (name, id_number, position, tax_number, "
+                "consent), add_certificate (employee, credential, body, number, issued, "
+                "expires), lookup (employee), list, update_certificate (employee, "
+                "credential, status=pending|verified|rejected|expired, note), remove "
+                "(employee), tax_check (tax_number). Owner-only: employee data stays "
+                "server-side and is never shown to visitors.")
+    return json.dumps(r, ensure_ascii=False)
+
+
 SKILLS = {
     "calculator": {
         "label": "Calculator",
@@ -618,6 +659,45 @@ SKILLS = {
                            "vat_number": {"type": "string"}},
                        "required": ["action"]},
         "fn": trust_desk},
+    "hr_file": {
+        "label": "Employee Trust Files",
+        "owner_only": True,
+        "description": "OWNER-ONLY employee records (POPIA-sensitive). Store and retrieve "
+                       "employees with their ID numbers, positions, SARS tax numbers "
+                       "(auto format-checked: personal tax reference = 10 digits starting "
+                       "0/1/2/3/9, employer PAYE = starts with 7, VAT numbers rejected), "
+                       "consent status, and every certificate/credential with verification "
+                       "status, expiry warnings and the official free channel to verify it "
+                       "(SACPCMP, SANC, AHPRA, SARS, SAQA...). Use when the owner wants to "
+                       "add an employee, record or retrieve employee certificates, check a "
+                       "SARS/tax number, or track verification status and expiries.",
+        "parameters": {"type": "object",
+                       "properties": {
+                           "action": {"type": "string",
+                                      "enum": ["add_employee", "add_certificate", "lookup",
+                                               "list", "update_certificate", "remove",
+                                               "tax_check"]},
+                           "employee": {"type": "string", "description": "employee name"},
+                           "name": {"type": "string", "description": "alias for employee"},
+                           "id_number": {"type": "string"},
+                           "position": {"type": "string"},
+                           "tax_number": {"type": "string",
+                                          "description": "the employee's SARS tax reference"},
+                           "consent": {"type": "string",
+                                       "description": "'yes' once POPIA screening consent is recorded"},
+                           "notes": {"type": "string"},
+                           "credential": {"type": "string",
+                                          "description": "e.g. 'SACPCMP Pr.CPM registration'"},
+                           "body": {"type": "string",
+                                    "description": "issuing body: SACPCMP, SANC, iQ Academy..."},
+                           "number": {"type": "string",
+                                      "description": "certificate/registration number"},
+                           "issued": {"type": "string"}, "expires": {"type": "string"},
+                           "status": {"type": "string",
+                                      "enum": ["pending", "verified", "rejected", "expired"]},
+                           "note": {"type": "string", "description": "verification note"}},
+                       "required": ["action"]},
+        "fn": hr_file},
 }
 
 
@@ -629,19 +709,23 @@ def names() -> list:
     return [{"id": k, "label": v["label"]} for k, v in SKILLS.items()]
 
 
-def tool_defs() -> list:
-    """OpenAI-format tool definitions for the model."""
+def tool_defs(owner: bool = False) -> list:
+    """OpenAI-format tool definitions for the model. Owner-only skills are hidden from
+    visitors so the model can never be talked into leaking employee data."""
     return [{"type": "function",
              "function": {"name": name, "description": sk["description"],
                           "parameters": sk["parameters"]}}
-            for name, sk in SKILLS.items()]
+            for name, sk in SKILLS.items() if owner or not sk.get("owner_only")]
 
 
-def run(name: str, args_json: str) -> str:
+def run(name: str, args_json: str, owner: bool = False) -> str:
     """Execute a skill call from the model. Always returns a string for the tool message."""
     sk = SKILLS.get(name)
     if not sk:
         return f"Unknown skill '{name}'."
+    if sk.get("owner_only") and not owner:
+        return ("This skill is owner-only: it holds employees' private data (ID and tax "
+                "numbers) and never answers for visitors.")
     try:
         args = json.loads(args_json) if args_json else {}
         if not isinstance(args, dict):

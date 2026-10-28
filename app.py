@@ -1155,7 +1155,7 @@ async def chat(request: Request):
     if engine != "main":
         generator = stream_other_engine(cfg, engine, request, history, asked[:8000])
     elif key and cfg.get("model") and cfg.get("base_url"):
-        generator = stream_answer(cfg, key, history, query, ifix=want_ifix)
+        generator = stream_answer(cfg, key, history, query, ifix=want_ifix, owner=admin_ok)
     else:
         ctx = await run_in_threadpool(kb.build_context, query, int(cfg.get("context_chars", 60000)))
         generator = stream_search_only(cfg, ctx, has_key=bool(key))
@@ -1438,7 +1438,9 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
     if ctx is None:
         ctx = {"mode": "tools", "blocks": [], "files": files}
     messages = [{"role": "system", "content": build_system_prompt(cfg, ctx, ifix)}] + to_api_messages(history)
-    tools = ([search_tool(files)] if searchable else []) + (skills.tool_defs() if skills_on else [])
+    owner = bool(state.get("owner"))     # owner-only skills stay invisible to visitors
+    tools = ([search_tool(files)] if searchable else []) + \
+            (skills.tool_defs(owner=owner) if skills_on else [])
     sources, seen, searches = [], set(), []
     for round_no in range(MAX_TOOL_ROUNDS + 1):
         kwargs = dict(model=model, messages=messages, stream=True, tools=tools, **extra)
@@ -1487,7 +1489,7 @@ def _answer_with_tools(client, cfg: dict, history: list, files: list, extra: dic
             if skills_on and skills.has(tool_name):
                 yield sse({"type": "status",
                            "text": f"Using skill: {skills.SKILLS[tool_name]['label']}…"})
-                result = skills.run(tool_name, c["args"])
+                result = skills.run(tool_name, c["args"], owner=owner)
             elif tool_name != "search_files":
                 result = f"Unknown tool “{tool_name}”."
             elif not searchable:
@@ -1527,11 +1529,13 @@ def _answer_classic(client, cfg: dict, history: list, query: str, extra: dict, s
         state["length"] = True
 
 
-def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = False):
+def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = False,
+                  owner: bool = False):
     if ifix:
         yield sse({"type": "engine", "engine": "ifixai", "label": "I FIX AI", "icon": "🛠"})
     base_url, model = cfg["base_url"], cfg["model"]
-    state = {"text": False, "gap": False, "length": False, "chain": _model_chain(cfg)}
+    state = {"text": False, "gap": False, "length": False, "chain": _model_chain(cfg),
+             "owner": bool(owner)}
     extra = {"reasoning_effort": cfg["reasoning_effort"]} if cfg.get("reasoning_effort") else {}
     if _is_gemini(base_url):
         # Gemini truncates at a small default; ask for the full budget so big
