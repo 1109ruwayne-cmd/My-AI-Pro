@@ -282,3 +282,8 @@ free signups, no credit card, zero behaviour change until the key exists; presen
 values) visible in GET /api/modules. Federation calls cap max_tokens at 8192 (free-tier
 safe). This is the answer to "Grok-class for free": Gemini brain + Groq/OpenRouter
 resilience + Brave/live_pulse data + the vertical skills Grok doesn't have.
+- xAI Grok slot (added same day): PROVIDERS["xai"] = selectable main engine in Settings
+  (api.x.ai/v1, default grok-4.3, any grok-4.x model id works) + XAI_API_KEY federation
+  rescue fired LAST (paid, opt-in). Grok vs Groq: Groq = free inference host (gpt-oss);
+  Grok = xAI's paid models. grok.com consumer accounts cannot be wired in (ToS); live X
+  data = paid x_search ($5/1k posts) regardless of model.

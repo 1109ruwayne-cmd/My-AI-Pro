@@ -175,6 +175,12 @@ PROVIDERS = {
         "model": "",
         "key_url": "https://console.groq.com/keys",
     },
+    "xai": {
+        "label": "xAI Grok (paid API - grok-4.x models)",
+        "base_url": "https://api.x.ai/v1",
+        "model": "grok-4.3",
+        "key_url": "https://console.x.ai",
+    },
     "ollama": {
         "label": "Ollama (free, offline on your computer)",
         "base_url": "http://localhost:11434/v1",
@@ -842,6 +848,8 @@ def modules_status(request: Request):
          "where": "server env OPENROUTER_API_KEY (openrouter.ai/keys - free, no card)"},
         {"name": "Federation: Brave Search", "present": bool(os.environ.get("BRAVE_API_KEY", "").strip()),
          "where": "server env BRAVE_API_KEY (brave.com/search/api - 2,000 free queries/mo)"},
+        {"name": "Federation: xAI Grok (paid)", "present": bool(os.environ.get("XAI_API_KEY", "").strip()),
+         "where": "server env XAI_API_KEY (console.x.ai - PAID, no free tier; last-resort rescue)"},
         {"name": "Render deploy token", "present": False,
          "where": "held outside the app by design (owner ops)"},
         {"name": "GitHub PAT", "present": False,
@@ -1377,7 +1385,8 @@ def _model_chain(cfg: dict) -> list:
 def _federation_providers() -> list:
     """Free-tier federation: cross-provider fallbacks armed ONLY by server env keys.
     GROQ_API_KEY -> gpt-oss-120b (free: 30 RPM, 1k requests/day, 200k tokens/day);
-    OPENROUTER_API_KEY -> openrouter/free auto-router (free: 20 RPM, 50/day).
+    OPENROUTER_API_KEY -> openrouter/free auto-router (free: 20 RPM, 50/day);
+    XAI_API_KEY -> grok-4.3 (PAID, no free tier - always tried last, opt-in by key).
     No keys set = empty list = zero behaviour change."""
     out = []
     gk = os.environ.get("GROQ_API_KEY", "").strip()
@@ -1390,6 +1399,12 @@ def _federation_providers() -> list:
         out.append({"name": "openrouter", "label": "OpenRouter :free auto-router", "key": ork,
                     "base_url": "https://openrouter.ai/api/v1",
                     "model": "openrouter/free"})
+    xk = os.environ.get("XAI_API_KEY", "").strip()
+    if xk:
+        # Paid provider - deliberately LAST: free rescues fire first, and this only
+        # exists at all if the owner opted in by setting a key.
+        out.append({"name": "xai", "label": "xAI Grok (paid rescue)", "key": xk,
+                    "base_url": "https://api.x.ai/v1", "model": "grok-4.3"})
     return out
 
 
