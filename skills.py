@@ -11,6 +11,9 @@ Skills shipped with this module:
     text_tools        counts, case, reverse, hashes, base64, slug
     random_generator  numbers, dice, coin, uuid, passwords
     web_search        live results from DuckDuckGo (no API key needed)
+    live_pulse        Grok-style real-time awareness, free: Google News RSS
+                      headlines, public Reddit pulse, Google Trends daily
+                      (no keys; X/Twitter itself stays paywalled)
     trust_desk        SA Trust Desk - credit rights (NCA s72), dispute/paid-up/
                       POPIA-consent letters, VAT format check, NCR lender & CIPC
                       company register guides, prof_register (verify project
@@ -48,6 +51,7 @@ import operator
 import re
 import secrets
 import string
+import xml.etree.ElementTree as ET
 import zoneinfo
 
 import httpx
@@ -329,6 +333,144 @@ def web_search(query: str = "", max_results: int = 5, **_) -> str:
                               ensure_ascii=False)
     return (f"No web results found for '{query}' (search engines unreachable or empty). "
             "Answer from your own knowledge and say it may not be current.")
+
+
+# ------------------------------------------------------------------ live pulse
+_GNEWS_UA = {"User-Agent": "Mozilla/5.0 (compatible; MyAIPro/1.0; +https://my-ai-pro-rkxe.onrender.com)"}
+
+
+def _google_news(query: str, geo: str = "ZA", max_items: int = 8) -> list:
+    """Live headlines via the public Google News RSS - free, no key."""
+    params = {"q": query, "hl": f"en-{geo}", "gl": geo, "ceid": f"{geo}:en"}
+    r = httpx.get("https://news.google.com/rss/search", params=params,
+                  headers=_GNEWS_UA, timeout=15, follow_redirects=True)
+    r.raise_for_status()
+    root = ET.fromstring(r.content)
+    out = []
+    for it in root.iter("item"):
+        title = (it.findtext("title") or "").strip()
+        if not title:
+            continue
+        out.append({"title": title,
+                    "publisher": (it.findtext("source") or "").strip(),
+                    "published": (it.findtext("pubDate") or "").strip(),
+                    "url": (it.findtext("link") or "").strip()})
+        if len(out) >= max_items:
+            break
+    return out
+
+
+def _reddit_pulse(query: str, max_items: int = 8) -> list:
+    """Live social pulse via Reddit's public JSON search - free, no key, polite UA."""
+    r = httpx.get("https://www.reddit.com/search.json",
+                  params={"q": query, "limit": max_items, "sort": "relevance"},
+                  headers={"User-Agent": "MyAIPro/1.0 (owner contact 1109ruwayne@gmail.com)"},
+                  timeout=15, follow_redirects=True)
+    r.raise_for_status()
+    out = []
+    for ch in (r.json().get("data", {}).get("children") or []):
+        p = ch.get("data", {})
+        if not p.get("title"):
+            continue
+        out.append({"title": p.get("title"), "subreddit": "r/" + str(p.get("subreddit", "")),
+                    "score": p.get("score", 0), "comments": p.get("num_comments", 0),
+                    "url": "https://www.reddit.com" + str(p.get("permalink", ""))})
+    return out
+
+
+def _google_trends(geo: str = "ZA") -> list:
+    """What a country is searching right now - Google Trends, free but unofficial.
+    Tries three public endpoints in order; datacenter IPs are sometimes blocked, so
+    the caller degrades gracefully."""
+    last = None
+    # 1) dailytrends JSON (with the )]}' guard)
+    try:
+        r = httpx.get("https://trends.google.com/trends/api/dailytrends",
+                      params={"hl": "en", "tz": "-120", "geo": geo},
+                      headers=_GNEWS_UA, timeout=15, follow_redirects=True)
+        r.raise_for_status()
+        payload = json.loads(r.text.split("\n", 1)[-1])
+        out = [{"topic": (s.get("title") or {}).get("query", ""), "traffic": s.get("traffic", "")}
+               for s in (payload.get("default", {}).get("trendingSearches") or [])[:10]]
+        if out:
+            return out
+    except Exception as exc:
+        last = exc
+    # 2) trending/json (newer surface)
+    try:
+        r = httpx.get("https://trends.google.com/trending/json",
+                      params={"geo": geo, "hours": 24},
+                      headers=_GNEWS_UA, timeout=15, follow_redirects=True)
+        r.raise_for_status()
+        trends = (r.json().get("trendingNow") or {}).get("trends") or []
+        out = [{"topic": t.get("query", ""), "traffic": str(t.get("searchVolume", ""))}
+               for t in trends[:10] if t.get("query")]
+        if out:
+            return out
+    except Exception as exc:
+        last = exc
+    # 3) daily RSS (oldest surface)
+    try:
+        r = httpx.get("https://trends.google.com/trendingsearches/daily/rss",
+                      params={"geo": geo}, headers=_GNEWS_UA, timeout=15, follow_redirects=True)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        out = [{"topic": (it.findtext("title") or "").strip(), "traffic": ""}
+               for it in root.iter("item") if (it.findtext("title") or "").strip()][:10]
+        if out:
+            return out
+    except Exception as exc:
+        last = exc
+    if last:
+        raise last
+    return []
+
+
+def live_pulse(source: str = "", query: str = "", geo: str = "ZA",
+               max_items: int = 8, **_) -> str:
+    """Grok-style live awareness without the paywall: real-time news, social pulse and
+    trending searches from free public endpoints. No API keys, nothing scraped behind a
+    login. X/Twitter itself is NOT reachable for free - use web_search for general pages."""
+    s = (source or "").strip().lower().replace(" ", "_")
+    geo = (geo or "ZA").strip().upper()[:2] or "ZA"
+    max_items = max(1, min(int(max_items or 8), 15))
+    if s in ("news", "headlines", "google_news"):
+        if not (query or "").strip():
+            return "live_pulse news needs a query, e.g. 'South Africa electricity'."
+        try:
+            items = _google_news(query, geo, max_items)
+        except Exception as exc:
+            return f"Google News unreachable ({type(exc).__name__}). Try web_search instead."
+        if not items:
+            return f"No live headlines found for '{query}' (geo {geo})."
+        return json.dumps({"source": "google_news", "query": query, "geo": geo,
+                           "results": items}, ensure_ascii=False)
+    if s in ("reddit", "social"):
+        if not (query or "").strip():
+            return "live_pulse reddit needs a query topic."
+        try:
+            items = _reddit_pulse(query, max_items)
+        except Exception as exc:
+            return (f"Reddit unreachable ({type(exc).__name__}) - it rate-limits shared "
+                    "server IPs sometimes. Retry later or use web_search.")
+        if not items:
+            return f"No Reddit posts found for '{query}'."
+        return json.dumps({"source": "reddit_public", "query": query,
+                           "results": items}, ensure_ascii=False)
+    if s in ("trends", "trending"):
+        try:
+            items = _google_trends(geo)
+        except Exception as exc:
+            return (f"Google Trends unreachable ({type(exc).__name__}) - unofficial "
+                    "endpoint, may be rate-limited. Try again later.")
+        if not items:
+            return f"No trending data returned for {geo}."
+        return json.dumps({"source": "google_trends_daily", "geo": geo,
+                           "trending": items}, ensure_ascii=False)
+    return ("live_pulse sources: news (live headlines for a query+country), reddit "
+            "(live social pulse for a topic), trends (daily trending searches for a "
+            "country, default ZA). All free, no keys. X/Twitter data is paywalled "
+            "industry-wide; for general web pages use web_search.")
 
 
 # --------------------------------------------------------------------- registry
@@ -647,6 +789,25 @@ SKILLS = {
                            "max_results": {"type": "integer", "description": "1-10, default 5"}},
                        "required": ["query"]},
         "fn": web_search},
+    "live_pulse": {
+        "label": "Live pulse",
+        "description": "Real-time data with no API keys (Grok-style live awareness, free "
+                       "sources): source=news -> live Google News headlines for a query and "
+                       "country (default ZA); source=reddit -> live public Reddit pulse for "
+                       "a topic (scores, comments, subreddit); source=trends -> what a "
+                       "country is searching right now (Google Trends daily). Use for 'what "
+                       "is happening / in the news / trending right now' questions. X/Twitter "
+                       "itself is paywalled everywhere; for ordinary web pages use web_search.",
+        "parameters": {"type": "object",
+                       "properties": {
+                           "source": {"type": "string", "enum": ["news", "reddit", "trends"]},
+                           "query": {"type": "string",
+                                     "description": "topic for news/reddit, e.g. 'Eskom'"},
+                           "geo": {"type": "string",
+                                   "description": "2-letter country code for news/trends, default ZA"},
+                           "max_items": {"type": "integer", "description": "1-15, default 8"}},
+                       "required": ["source"]},
+        "fn": live_pulse},
     "trust_desk": {
         "label": "SA Trust Desk",
         "description": "South African credit & trust helpers (lawful, defensive): consumer credit "

@@ -263,3 +263,11 @@ rejected, modulus-10 check digit flag. NEVER pull from SARS - employee supplies 
 number, IT150/IRP5 is the proof. Every certificate comes back with its free official
 verification channel (module 32). Owner-only gating: the skill is hidden from visitors'
 tool lists and refuses non-owner calls.
+
+## Live Pulse (added 2026-10-28)
+`live_pulse` skill = free Grok-style real-time awareness: source=news (Google News RSS,
+query+geo), reddit (public search.json pulse), trends (Google Trends daily, 3-endpoint
+fallback chain; unofficial, datacenter IPs sometimes blocked - degrades gracefully).
+No keys. X/Twitter data stays paywalled industry-wide (xAI x_search $5/1k posts; official
+X API same; resellers ~$0.15/1k). Grok as an engine = paid xAI API (grok-4.3 $1.25/$2.50
+per 1M tok), OpenAI-compatible api.x.ai/v1 - parked until owner supplies a key.
