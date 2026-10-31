@@ -10,7 +10,8 @@ Skills shipped with this module:
     unit_convert      length, mass, volume, area, data, speed, time, temperature
     text_tools        counts, case, reverse, hashes, base64, slug
     random_generator  numbers, dice, coin, uuid, passwords
-    web_search        live results from DuckDuckGo (no API key needed)
+    web_search        live results from Brave (free key, optional) or
+                      DuckDuckGo (no API key needed), Wikipedia fallback
     live_pulse        Grok-style real-time awareness, free: Google News RSS
                       headlines, public Reddit pulse, Google Trends daily
                       (no keys; X/Twitter itself stays paywalled)
@@ -48,6 +49,7 @@ import hashlib
 import json
 import math
 import operator
+import os
 import re
 import secrets
 import string
@@ -317,13 +319,35 @@ def _wikipedia(query: str, max_results: int) -> list:
             for h in hits]
 
 
+def _brave(query: str, max_results: int) -> list:
+    """Brave Search API - independent web index, free tier 2,000 queries/month.
+    Active only when the server env carries BRAVE_API_KEY; otherwise returns []."""
+    key = os.environ.get("BRAVE_API_KEY", "").strip()
+    if not key:
+        return []
+    r = httpx.get("https://api.search.brave.com/res/v1/web/search",
+                  params={"q": query, "count": max_results},
+                  headers={"X-Subscription-Token": key, "Accept": "application/json"},
+                  timeout=15)
+    r.raise_for_status()
+    out = []
+    for item in ((r.json().get("web") or {}).get("results") or [])[:max_results]:
+        if item.get("title") and item.get("url"):
+            out.append({"title": item["title"], "url": item["url"],
+                        "snippet": (item.get("description") or "").strip()})
+    return out
+
+
 def web_search(query: str = "", max_results: int = 5, **_) -> str:
-    """Live search: DuckDuckGo first, Wikipedia as the always-on fallback. No API keys."""
+    """Live search: Brave (when the owner set a free API key), else DuckDuckGo, with
+    Wikipedia as the always-on fallback. No paid calls ever."""
     query = str(query).strip()
     if not query:
         return "No search query given."
     max_results = max(1, min(int(max_results or 5), 10))
-    for engine, fn in (("duckduckgo", _ddg), ("wikipedia", _wikipedia)):
+    engines = ([("brave", _brave)] if os.environ.get("BRAVE_API_KEY", "").strip() else [])
+    engines += [("duckduckgo", _ddg), ("wikipedia", _wikipedia)]
+    for engine, fn in engines:
         try:
             results = fn(query, max_results)
         except Exception:
@@ -780,7 +804,9 @@ SKILLS = {
         "fn": random_generator},
     "web_search": {
         "label": "Web search",
-        "description": "Search the live web (DuckDuckGo) and get titles, URLs and snippets. "
+        "description": "Search the live web and get titles, URLs and snippets. Uses the "
+                       "Brave Search API when the owner configured a free key, otherwise "
+                       "DuckDuckGo, with Wikipedia as fallback. "
                        "Use for current events, prices, news, anything after your training "
                        "cut-off, or to verify a fact. Give specific keywords.",
         "parameters": {"type": "object",

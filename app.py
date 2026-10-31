@@ -836,13 +836,20 @@ def modules_status(request: Request):
         {"name": "Turso mirror", "present": bool(os.environ.get("TURSO_DB_URL", "").strip()),
          "where": "server env TURSO_DB_URL/TOKEN"},
         {"name": "Registry SMTP sender", "present": smtp_on, "where": "registry settings (masked)"},
+        {"name": "Federation: Groq free tier", "present": bool(os.environ.get("GROQ_API_KEY", "").strip()),
+         "where": "server env GROQ_API_KEY (console.groq.com - free, no card)"},
+        {"name": "Federation: OpenRouter :free", "present": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
+         "where": "server env OPENROUTER_API_KEY (openrouter.ai/keys - free, no card)"},
+        {"name": "Federation: Brave Search", "present": bool(os.environ.get("BRAVE_API_KEY", "").strip()),
+         "where": "server env BRAVE_API_KEY (brave.com/search/api - 2,000 free queries/mo)"},
         {"name": "Render deploy token", "present": False,
          "where": "held outside the app by design (owner ops)"},
         {"name": "GitHub PAT", "present": False,
          "where": "re-minted 2026-10-20 - held by owner outside the app; never stored in app code"},
     ]
     mods = [
-        {"name": "Chat engine + fallback chain", "status": f"{len(PROVIDERS)} providers"},
+        {"name": "Chat engine + fallback chain",
+         "status": f"{len(PROVIDERS)} providers + {len(_federation_providers())} federation fallbacks"},
         {"name": "Knowledge base", "status": f"{len(kb.files)} file(s) incl. full self-source mirrors"},
         {"name": "Agent Skills", "status": f"{len(skills.tool_defs())} keyless skills"},
         {"name": "Connector engines", "status": "web search, pages, weather, fx, dictionary, wiki"},
@@ -1367,6 +1374,25 @@ def _model_chain(cfg: dict) -> list:
     return []
 
 
+def _federation_providers() -> list:
+    """Free-tier federation: cross-provider fallbacks armed ONLY by server env keys.
+    GROQ_API_KEY -> gpt-oss-120b (free: 30 RPM, 1k requests/day, 200k tokens/day);
+    OPENROUTER_API_KEY -> openrouter/free auto-router (free: 20 RPM, 50/day).
+    No keys set = empty list = zero behaviour change."""
+    out = []
+    gk = os.environ.get("GROQ_API_KEY", "").strip()
+    if gk:
+        out.append({"name": "groq", "label": "Groq free tier (gpt-oss-120b)", "key": gk,
+                    "base_url": "https://api.groq.com/openai/v1",
+                    "model": "openai/gpt-oss-120b"})
+    ork = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if ork:
+        out.append({"name": "openrouter", "label": "OpenRouter :free auto-router", "key": ork,
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "model": "openrouter/free"})
+    return out
+
+
 MAX_CONTINUATIONS = 3      # auto-continue a truncated answer up to 3 times
 _CONTINUE_MSG = ("Your answer was cut off by the output limit. Continue EXACTLY where you "
                  "stopped, in the middle of the code block if needed. Do not repeat anything "
@@ -1578,6 +1604,40 @@ def stream_answer(cfg: dict, key: str, history: list, query: str, ifix: bool = F
             state["gap"] = state["text"]
             yield from _answer_classic(client, cfg, history, query, extra, state,
                                        (result or {}).get("searches", ()), ifix)
+        if not state["text"]:
+            # Free-tier federation: when the primary provider is fully busy/rate-limited,
+            # env-keyed fallback providers (Groq, OpenRouter :free) rescue the answer.
+            for fed in _federation_providers():
+                try:
+                    yield sse({"type": "status",
+                               "text": f"Primary AI unavailable - switching to {fed['label']}…"})
+                    fed_cfg = dict(cfg, base_url=fed["base_url"], model=fed["model"],
+                                   provider=fed["name"])
+                    fed_extra = dict(extra)
+                    fed_extra["max_tokens"] = min(int(cfg.get("max_output_tokens") or 8192), 8192)
+                    fed_client = OpenAI(api_key=fed["key"], base_url=fed["base_url"],
+                                        timeout=300, max_retries=1)
+                    main_chain = state["chain"]
+                    state["chain"] = _model_chain(fed_cfg)
+                    try:
+                        if (searchable or skills_on) and \
+                                _tools_work.get((fed["base_url"], fed["model"]), True):
+                            fres = yield from _answer_with_tools(fed_client, fed_cfg, history,
+                                                                 files, fed_extra, state,
+                                                                 searchable, None, ifix)
+                        else:
+                            fres = {"fallback": True, "searches": ()}
+                        if fres is None or fres.get("fallback"):
+                            state["gap"] = state["text"]
+                            yield from _answer_classic(fed_client, fed_cfg, history, query,
+                                                       fed_extra, state,
+                                                       (fres or {}).get("searches", ()), ifix)
+                    finally:
+                        state["chain"] = main_chain
+                    if state["text"]:
+                        break
+                except Exception:
+                    continue
         if not state["text"]:
             yield sse({"type": "delta", "text": "_(The AI sent back an empty answer. Try rephrasing, "
                                                 "or choose another model in ⚙️ Settings.)_"})

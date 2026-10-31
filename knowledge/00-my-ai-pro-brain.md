@@ -271,3 +271,14 @@ fallback chain; unofficial, datacenter IPs sometimes blocked - degrades graceful
 No keys. X/Twitter data stays paywalled industry-wide (xAI x_search $5/1k posts; official
 X API same; resellers ~$0.15/1k). Grok as an engine = paid xAI API (grok-4.3 $1.25/$2.50
 per 1M tok), OpenAI-compatible api.x.ai/v1 - parked until owner supplies a key.
+
+## Free-Tier Federation (added 2026-10-31)
+Cross-provider rescue for chat: when the primary Gemini chain is fully busy/rate-limited
+and would return an empty answer, env-keyed fallbacks take over - GROQ_API_KEY ->
+gpt-oss-120b (free 30 RPM / 1k req/day / 200k tok/day), OPENROUTER_API_KEY ->
+openrouter/free auto-router (free 20 RPM / 50 req/day). BRAVE_API_KEY upgrades web_search
+to Brave's independent index (free 2,000 queries/mo) ahead of DuckDuckGo. All three:
+free signups, no credit card, zero behaviour change until the key exists; presence (never
+values) visible in GET /api/modules. Federation calls cap max_tokens at 8192 (free-tier
+safe). This is the answer to "Grok-class for free": Gemini brain + Groq/OpenRouter
+resilience + Brave/live_pulse data + the vertical skills Grok doesn't have.
