@@ -1727,16 +1727,19 @@ async def security_headers(request: Request, call_next):
 # with usage notes, Google Font pairing, voice rules). Server-side generation uses
 # the configured provider; output is sanitised before it ever reaches a browser.
 
-_BRAND_SYSTEM = (
+_BRAND_COMMON = (
     "You are BrandForge, an elite brand identity director and trademark-compliance "
-    "counsel. From a company mission you design a complete, coherent brand identity and "
-    "its governance system. Respond with ONLY one valid JSON object, no markdown fences, "
-    "no commentary, with exactly these keys:\n"
+    "counsel. Respond with ONLY one valid JSON object, no markdown fences, no commentary. "
+    "Be terse: every descriptive string at most 25 words. Every colour, shape, word and "
+    "rule must reinforce the mission's industry, mood and regulatory reality (FTC Green "
+    "Guides / CMA / EU green-claims rules where relevant).\n"
+)
+_BRAND_SYSTEM_A = _BRAND_COMMON + (
+    "Part 1 of 2 - identity and visuals, with exactly these keys: "
     '{"brand_name": string, "tagline": string (max 8 words), "positioning": string (one '
-    'sentence brand promise), "manifesto": string (60-110 word brand manifesto, punchy), '
+    'sentence brand promise), "manifesto": string (60-90 word brand manifesto, punchy), '
     '"taglines": [ {"text": string, "focus": string (strategic focus label)} ] exactly 3, '
-    '"pillars": [ {"code": "PILLAR_01"..., "name": string, "detail": string (1-2 sentences)} '
-    '] exactly 4, '
+    '"pillars": [ {"code": "PILLAR_01"..., "name": string, "detail": string} ] exactly 4, '
     '"logo_svg": string (one complete standalone <svg> primary logo, viewBox="0 0 512 512", '
     "flat modern vector shapes only, no scripts, no external references, no text longer "
     "than the brand initials, colours from the palette), "
@@ -1745,7 +1748,11 @@ _BRAND_SYSTEM = (
     '"palette": [ {"hex": "#RRGGBB", "name": string, "usage": string} ] exactly 5 ordered '
     'primary, secondary, accent, neutral, ink, '
     '"fonts": {"header": {"family": string (real current Google Fonts family), "why": '
-    'string}, "body": {"family": string (real current Google Fonts family), "why": string}}, '
+    'string}, "body": {"family": string (real current Google Fonts family), "why": string}}.'
+)
+_BRAND_SYSTEM_B = _BRAND_COMMON + (
+    "Part 2 of 2 - voice and governance for the brand given in the user message, with "
+    'exactly these keys: '
     '"voice_spectrums": [ {"name": string, "score": integer 1-100, "low": string (left pole '
     'label), "high": string (right pole label), "note": string} ] exactly 4, '
     '"vocabulary": [ {"preferred": string, "avoid": string, "context": string} ] exactly 4, '
@@ -1756,15 +1763,10 @@ _BRAND_SYSTEM = (
     'banned term), "good": string (compliant rewrite of that sentence), "alternative": '
     'string (short approved replacement phrase)} ] exactly 5}, '
     '"voice": [ string, string, string ] (three brand-voice rules), '
-    '"applications": [ {"name": string (touchpoint e.g. business card), "note": string '
-    '(how the identity applies)} ] exactly 4, '
+    '"applications": [ {"name": string (touchpoint e.g. business card), "note": string} ] '
+    'exactly 4, '
     '"social": [ {"platform": string, "idea": string (content idea in brand voice)} ] '
-    'exactly 3. '
-    "Every colour, shape, word and rule must reinforce the mission's industry, mood and "
-    "regulatory reality (FTC Green Guides / CMA / EU green-claims rules where relevant). "
-    "Be terse: every usage/rule/hazard/risk/bad/good/why/note/detail string at most 25 "
-    "words; the complete JSON must stay under 11000 tokens and MUST include ALL keys, "
-    "including applications, social and voice at the end."
+    "exactly 3."
 )
 
 
@@ -1865,11 +1867,9 @@ async def brandforge(request: Request):
     base_url = cfg.get("base_url", "").strip()
     model = cfg.get("model", "").strip()
 
-    def _generate():
+    def _call(msgs):
         # Same resilience as chat: provider model chain first, one retry on
         # capacity errors, then the env-keyed federation rescues.
-        msgs = [{"role": "system", "content": _BRAND_SYSTEM},
-                {"role": "user", "content": f"Company mission: {mission}"}]
         cands = [(key, base_url, model)]
         cands += [(key, base_url, m) for m in _model_chain(cfg)]
         for fed in _federation_providers():
@@ -1880,7 +1880,7 @@ async def brandforge(request: Request):
                 try:
                     client = OpenAI(api_key=ck, base_url=cbu, timeout=240, max_retries=0)
                     resp = client.chat.completions.create(
-                        model=cmd, temperature=0.9, max_tokens=16000, messages=msgs)
+                        model=cmd, temperature=0.9, max_tokens=8000, messages=msgs)
                     return resp.choices[0].message.content or ""
                 except Exception as exc:
                     last = exc
@@ -1891,13 +1891,33 @@ async def brandforge(request: Request):
                         time.sleep(3)              # capacity hiccup: one patient retry
         raise last
 
+    def _generate():
+        # Two passes: identity+visuals, then voice+governance - each fits inside
+        # every provider's output cap, and part 2 inherits part 1's brand facts.
+        part_a = _parse_brand_json(_call(
+            [{"role": "system", "content": _BRAND_SYSTEM_A},
+             {"role": "user", "content": f"Company mission: {mission}"}]))
+        if not isinstance(part_a, dict):
+            return None
+        brief = (f"Brand: {part_a.get('brand_name', '')}. Tagline: {part_a.get('tagline', '')}. "
+                 f"Palette: {', '.join(p.get('hex', '') for p in part_a.get('palette', [])[:5])}. "
+                 f"Fonts: {part_a.get('fonts', {}).get('header', {}).get('family', '')} / "
+                 f"{part_a.get('fonts', {}).get('body', {}).get('family', '')}. "
+                 f"Mission: {mission}")
+        part_b = _parse_brand_json(_call(
+            [{"role": "system", "content": _BRAND_SYSTEM_B},
+             {"role": "user", "content": brief}]))
+        if isinstance(part_b, dict):
+            part_a.update(part_b)
+        return part_a
+
     try:
-        text = await run_in_threadpool(_generate)
+        data = await run_in_threadpool(_generate)
     except Exception as exc:
         raise HTTPException(502, friendly_error(exc, base_url, model))
-    data = _parse_brand_json(text)
     if not isinstance(data, dict):
         raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
+
     def _s(v, n=200):
         return str(v or "")[:n]
 
