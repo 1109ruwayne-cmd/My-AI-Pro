@@ -1982,6 +1982,12 @@ def brandforge_page():
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/downloads", response_class=HTMLResponse)
+def downloads_page():
+    return FileResponse(BASE_DIR / "static" / "downloads.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
 @app.post("/api/brandforge")
 async def brandforge(request: Request):
     try:

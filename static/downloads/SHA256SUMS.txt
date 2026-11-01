@@ -1,0 +1,3 @@
+03225048f4ded574a2774bcdf6500b47e26f97dfc6cccbea7d1337d3a11fa075  SmashAIPro-1.0.0.apk
+3988db652b1ceb1d5c153ccbcc2ab30390f54ff40af6403140e1bb027f90b622  SmashAIPro-Launcher-1.0.0.exe
+62f68713c673831a6ee8f610b254d88a7eb58b48b289abf849f8a83ea9c6415e  SmashAIPro-1.0.0-win64-portable.zip (hosted on GitHub Releases)

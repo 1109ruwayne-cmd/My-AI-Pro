@@ -1,0 +1,107 @@
+{
+  "name": "Billing test AI",
+  "creator": "Ruwayne",
+  "provider": "custom",
+  "base_url": "http://127.0.0.1:9411/v1",
+  "model": "mock-openai",
+  "answer_mode": "files_first",
+  "instructions": "",
+  "context_chars": 60000,
+  "history_messages": 20,
+  "suggestions": [],
+  "reasoning_effort": "",
+  "auto_route": false,
+  "vtuber_audio": true,
+  "skills_enabled": true,
+  "engines": {
+    "main": {
+      "enabled": false,
+      "url": "",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "openhands": {
+      "enabled": false,
+      "url": "http://127.0.0.1:8000",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "dify": {
+      "enabled": false,
+      "url": "http://127.0.0.1/v1",
+      "model": "",
+      "key": "",
+      "extra": {
+        "user": "my-ai",
+        "inputs": {},
+        "conversation_id": ""
+      }
+    },
+    "vtuber": {
+      "enabled": false,
+      "url": "http://127.0.0.1:12393",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "ollama": {
+      "enabled": false,
+      "url": "http://127.0.0.1:11434/v1",
+      "model": "",
+      "key": "",
+      "extra": {}
+    },
+    "orca": {
+      "enabled": false,
+      "url": "http://127.0.0.1:11434/v1",
+      "model": "orca-mini",
+      "key": "",
+      "extra": {}
+    },
+    "free": {
+      "enabled": false,
+      "url": "https://openrouter.ai/api/v1",
+      "model": "openrouter/auto",
+      "key": "",
+      "extra": {}
+    },
+    "custom2": {
+      "enabled": false,
+      "url": "",
+      "model": "",
+      "key": "",
+      "extra": {}
+    }
+  },
+  "billing": {
+    "enabled": true,
+    "free_prompts": 2,
+    "free_tokens": 1000000,
+    "window": "lifetime",
+    "plan_name": "Test Plus",
+    "price": "49",
+    "currency": "ZAR",
+    "interval": "month",
+    "providers": {
+      "manual": true,
+      "stripe": true,
+      "paystack": true
+    },
+    "stripe_secret": "sk_test_x",
+    "stripe_webhook_secret": "whsec_test",
+    "stripe_base": "http://127.0.0.1:9415",
+    "paystack_secret": "pk_test_x",
+    "paystack_base": "http://127.0.0.1:9415",
+    "bank": {
+      "bank": "FNB",
+      "account_name": "Thabo Example",
+      "account_number": "62812345678",
+      "branch": "250655",
+      "reference_note": ""
+    },
+    "pay_note": "Email proof of payment to owner@example.com",
+    "verify_hours": 3
+  }
+}

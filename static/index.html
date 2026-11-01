@@ -565,6 +565,9 @@ details.adv[open] summary{margin-bottom:14px}
       <button class="btn" id="brandBtn" type="button" title="BrandForge - brand identity generator & Brand Bible">
         <span aria-hidden="true">🎨</span> Brand Bible
       </button>
+      <button class="btn" id="dlBtn" type="button" title="Get the Smash AI Pro app - Android APK and Windows desktop">
+        <span aria-hidden="true">📥</span> Get the app
+      </button>
       <button class="btn" id="settingsBtn" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>
         Settings
@@ -3172,6 +3175,7 @@ details.adv[open] summary{margin-bottom:14px}
   $('#ownerBtn').addEventListener('click', ownerAccess);
   $('#regBtn').addEventListener('click', function () { location.href = '/registry'; });
   $('#brandBtn').addEventListener('click', function () { location.href = '/brandforge'; });
+  if ($('#dlBtn')) $('#dlBtn').addEventListener('click', function () { location.href = '/downloads'; });
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sideBtn').addEventListener('click', function () {
     var on = document.querySelector('.app').classList.toggle('sideless');
