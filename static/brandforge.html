@@ -14,43 +14,51 @@
 })();
 </script>
 <style>
-:root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);--accent:#5b5bd6;--accent2:#8b5cf6;--accent-ink:#4444c0;--accent-soft:#edecff;--ring:rgba(91,91,214,.16);--shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07);--display:ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
-:root[data-theme="atelier-dark"]{--bg:#0d0f1f;--surface:#161a34;--surface2:#1c2040;--text:#e9ebfa;--muted:#98a0c6;--border:#272c4e;--hair:rgba(233,235,250,.08);--accent:#8a8af2;--accent2:#a78bfa;--accent-ink:#c0c0ff;--accent-soft:#232858;--ring:rgba(138,138,242,.28);--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.38)}
-:root[data-theme="gold"]{--bg:#14110c;--surface:#1e1913;--surface2:#251f17;--text:#f2e9d8;--muted:#b0a186;--border:#3b3123;--hair:rgba(242,233,216,.08);--accent:#c9a35c;--accent2:#e8cd94;--accent-ink:#e8cd94;--accent-soft:#31281a;--ring:rgba(201,163,92,.22);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);--display:"Hoefler Text",Garamond,Georgia,"Times New Roman",serif}
-:root[data-theme="aurora"]{--bg:#0a0f24;--surface:rgba(255,255,255,.065);--surface2:rgba(255,255,255,.10);--text:#edf2ff;--muted:#9dabcf;--border:rgba(255,255,255,.13);--hair:rgba(255,255,255,.09);--accent:#6ea8ff;--accent2:#c084fc;--accent-ink:#c3d8ff;--accent-soft:rgba(110,168,255,.15);--ring:rgba(110,168,255,.26);--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4)}
-:root[data-theme="neon"]{--bg:#05070e;--surface:#0b101e;--surface2:#101828;--text:#e8f7ff;--muted:#8296ae;--border:#182238;--hair:rgba(232,247,255,.07);--accent:#22d3ee;--accent2:#e879f9;--accent-ink:#8ceaf8;--accent-soft:#0e2334;--ring:rgba(34,211,238,.22);--shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px rgba(0,0,0,.5)}
+:root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);--accent:#5b5bd6;--accent2:#8b5cf6;--accent-ink:#4444c0;--accent-soft:#edecff;--ring:rgba(91,91,214,.16);--ok:#1f9468;--ok-soft:#eaf7f1;--danger:#cf4040;--danger-soft:#fdf1f1;--warn:#9a6210;--warn-soft:#fff8e8;--shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07);--display:ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
+:root[data-theme="atelier-dark"]{--bg:#0d0f1f;--surface:#161a34;--surface2:#1c2040;--text:#e9ebfa;--muted:#98a0c6;--border:#272c4e;--hair:rgba(233,235,250,.08);--accent:#8a8af2;--accent2:#a78bfa;--accent-ink:#c0c0ff;--accent-soft:#232858;--ring:rgba(138,138,242,.28);--ok:#4cc396;--ok-soft:#16352a;--danger:#ff8585;--danger-soft:#3a1e21;--warn:#e2a75c;--warn-soft:#332a15;--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.38)}
+:root[data-theme="gold"]{--bg:#14110c;--surface:#1e1913;--surface2:#251f17;--text:#f2e9d8;--muted:#b0a186;--border:#3b3123;--hair:rgba(242,233,216,.08);--accent:#c9a35c;--accent2:#e8cd94;--accent-ink:#e8cd94;--accent-soft:#31281a;--ring:rgba(201,163,92,.22);--ok:#84c39a;--ok-soft:#1d2e22;--danger:#e07a6a;--danger-soft:#39211c;--warn:#d9a441;--warn-soft:#322913;--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);--display:"Hoefler Text",Garamond,Georgia,"Times New Roman",serif}
+:root[data-theme="aurora"]{--bg:#0a0f24;--surface:rgba(255,255,255,.065);--surface2:rgba(255,255,255,.10);--text:#edf2ff;--muted:#9dabcf;--border:rgba(255,255,255,.13);--hair:rgba(255,255,255,.09);--accent:#6ea8ff;--accent2:#c084fc;--accent-ink:#c3d8ff;--accent-soft:rgba(110,168,255,.15);--ring:rgba(110,168,255,.26);--ok:#5fd6a4;--ok-soft:rgba(95,214,164,.12);--danger:#ff8f9d;--danger-soft:rgba(255,143,157,.12);--warn:#f0b95f;--warn-soft:rgba(240,185,95,.12);--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4)}
+:root[data-theme="neon"]{--bg:#05070e;--surface:#0b101e;--surface2:#101828;--text:#e8f7ff;--muted:#8296ae;--border:#182238;--hair:rgba(232,247,255,.07);--accent:#22d3ee;--accent2:#e879f9;--accent-ink:#8ceaf8;--accent-soft:#0e2334;--ring:rgba(34,211,238,.22);--ok:#2ee6a8;--ok-soft:#0d2a20;--danger:#ff5d73;--danger-soft:#2a1219;--warn:#ffb454;--warn-soft:#2a1f0e;--shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px rgba(0,0,0,.5)}
 *{box-sizing:border-box}
 body{margin:0;font:15.5px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(1100px 520px at 88% -12%,var(--ring),transparent 62%),radial-gradient(900px 480px at -8% 112%,var(--ring),transparent 58%),var(--bg);background-attachment:fixed;min-height:100vh}
-.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 80px}
-header.top{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 90px}
+header.top{display:flex;align-items:center;gap:14px;margin-bottom:20px}
 .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 20px var(--ring)}
 :root[data-theme="gold"] .logo{color:#201809}
 h1{font-family:var(--display);font-size:26px;margin:0;letter-spacing:-.01em}
 .sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
 .back{margin-left:auto;color:var(--accent-ink);text-decoration:none;font-size:13.5px;font-weight:600;border:1px solid var(--border);border-radius:10px;padding:7px 12px;background:var(--surface)}
 .back:hover{border-color:var(--accent)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:20px;margin-top:18px}
 textarea{width:100%;min-height:96px;resize:vertical;border:1px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--text);padding:12px 14px;font:inherit}
 textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 .row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
 button.go{border:0;border-radius:12px;padding:11px 22px;font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 18px var(--ring);cursor:pointer}
 :root[data-theme="gold"] button.go{color:#201809}
 button.go:disabled{opacity:.55;cursor:wait}
-button.ghost{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px 16px;font-weight:600;cursor:pointer}
+button.ghost{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:9px 14px;font-weight:600;cursor:pointer;font-size:13.5px}
 button.ghost:hover{border-color:var(--accent)}
 .status{color:var(--muted);font-size:13.5px}
-.err{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid #6a3538;background:#3a1e21;color:#ffb4b4;font-size:14px}
-:root[data-theme="atelier-light"] .err{background:#fdf1f1;border-color:#f2caca;color:#a33}
-#dash{display:none;margin-top:26px}
-.hero{text-align:center;padding:34px 22px}
-.hero .bn{font-family:var(--display);font-size:clamp(30px,5vw,44px);margin:0;letter-spacing:-.02em}
-.hero .tg{color:var(--accent-ink);font-size:17px;margin:8px 0 4px;font-weight:600}
-.hero .pos{color:var(--muted);max-width:640px;margin:6px auto 0}
-.grid{display:grid;gap:18px;margin-top:18px}
-@media(min-width:820px){.grid.two{grid-template-columns:1.1fr .9fr}}
-h2.sec{font-family:var(--display);font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px}
-.svgbox{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:18px;display:grid;place-items:center;min-height:220px}
-.svgbox svg{max-width:230px;max-height:230px;width:100%;height:auto}
+.err{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--danger);background:var(--danger-soft);color:var(--danger);font-size:14px}
+nav.idx{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+nav.idx a{font-size:12.5px;font-weight:650;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:99px;padding:6px 12px;background:var(--surface)}
+nav.idx a:hover{color:var(--accent-ink);border-color:var(--accent)}
+#dash{display:none}
+.hero{text-align:center;padding:34px 22px;margin-top:18px}
+.hero .bn{font-family:var(--display);font-size:clamp(30px,5vw,46px);margin:0;letter-spacing:-.02em}
+.hero .tg{color:var(--accent-ink);font-size:18px;margin:8px 0 4px;font-weight:650}
+.hero .pos{color:var(--muted);max-width:660px;margin:6px auto 0}
+h2.sec{font-family:var(--display);font-size:14px;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);margin:0 0 14px}
+h2.sec b{color:var(--accent-ink)}
+.manifesto{font-size:16.5px;line-height:1.75;border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:0}
+.grid{display:grid;gap:14px}
+@media(min-width:760px){.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c4{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:14px}
+.tile .k{font-size:11px;letter-spacing:.1em;color:var(--accent-ink);font-weight:750;text-transform:uppercase}
+.tile .t{font-weight:700;margin:4px 0}
+.tile .d{color:var(--muted);font-size:13.5px}
+.svgbox{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:18px;display:grid;place-items:center;min-height:230px}
+.svgbox svg{max-width:240px;max-height:240px;width:100%;height:auto}
 .marks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .mark{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:14px;text-align:center}
 .mark svg{max-width:84px;max-height:84px}
@@ -62,16 +70,39 @@ h2.sec{font-family:var(--display);font-size:15px;text-transform:uppercase;letter
 .sw .mt{padding:9px 10px;font-size:11.5px;line-height:1.45}
 .sw .hx{font-family:var(--mono);font-weight:700;font-size:12px}
 .sw .un{color:var(--muted)}
-.fonts{display:grid;gap:14px}
-@media(min-width:700px){.fonts{grid-template-columns:1fr 1fr}}
 .fcard{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:16px}
 .fcard .spec{font-size:30px;line-height:1.2;margin:4px 0 8px}
 .fcard .fam{font-weight:700}
 .fcard .why{color:var(--muted);font-size:13px}
-.voice{margin:0;padding-left:20px;display:grid;gap:8px}
+.spec-row{display:grid;gap:10px}
+.sp .lab{display:flex;justify-content:space-between;font-size:13.5px;font-weight:650}
+.sp .bar{height:8px;border-radius:99px;background:var(--surface2);border:1px solid var(--hair);overflow:hidden;margin:6px 0 4px}
+.sp .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.sp .poles{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px}
+.sp .note{color:var(--muted);font-size:12.5px;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--hair);vertical-align:top}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
+td.good{color:var(--ok)}td.bad{color:var(--danger)}
+.tier{border-radius:14px;border:1px solid var(--hair);padding:14px;background:var(--surface2)}
+.tier h3{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.tier.res h3{color:var(--accent-ink)}.tier.pub h3{color:var(--ok)}.tier.pro h3{color:var(--danger)}
+.lx{border:1px solid var(--hair);border-radius:12px;background:var(--surface);padding:12px;margin-bottom:10px}
+.lx .tm{font-weight:750}
+.lx .rl{color:var(--muted);font-size:13px;margin-top:4px}
+.lx .ex{font-size:13px;margin-top:8px;padding:8px 10px;border-radius:10px}
+.lx .ex.bad{background:var(--danger-soft);color:var(--danger)}
+.lx .ex.good{background:var(--ok-soft);color:var(--ok)}
+.lx .alt{margin-top:8px;font-size:12.5px;color:var(--accent-ink);font-weight:650}
+.aud-sum{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.pill{border-radius:99px;padding:6px 14px;font-size:12.5px;font-weight:700;border:1px solid var(--hair)}
+.pill.h{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
+.pill.r{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.pill.p{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.fix{margin-top:8px}
 .spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:inline-block;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 16px;box-shadow:var(--shadow);font-size:13.5px;opacity:0;transition:opacity .25s}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 16px;box-shadow:var(--shadow);font-size:13.5px;opacity:0;transition:opacity .25s;z-index:60}
 .toast.on{opacity:1}
 </style>
 </head>
@@ -83,44 +114,77 @@ h2.sec{font-family:var(--display);font-size:15px;text-transform:uppercase;letter
     <a class="back" href="/">← Back to My AI</a>
   </header>
 
-  <div class="card">
+  <div class="card" style="margin-top:0">
     <h2 class="sec">The mission</h2>
-    <textarea id="mission" placeholder="e.g. We build affordable solar-powered cold rooms for small farms across the Eastern Cape, so harvests survive without grid power…"></textarea>
+    <textarea id="mission" placeholder="e.g. We transform agricultural waste into carbon-negative structural biopolymers that replace petroleum plastics in global manufacturing…"></textarea>
     <div class="row">
       <button class="go" id="go">Forge the Brand Bible</button>
-      <span class="status" id="status">Describe the company mission — the forge does the rest.</span>
+      <span class="status" id="status">Describe the company mission — the forge writes the manifesto, cuts the logo, mixes the palette, sets the type and drafts the legal lexicon.</span>
     </div>
     <div class="err" id="err"></div>
   </div>
 
   <div id="dash">
+    <nav class="idx" id="idx"></nav>
     <div class="card hero">
       <p class="bn" id="bn"></p>
       <p class="tg" id="tg"></p>
       <p class="pos" id="pos"></p>
     </div>
-    <div class="grid two">
-      <div class="card">
-        <h2 class="sec">Primary logo</h2>
-        <div class="svgbox" id="logoBox"></div>
-        <div class="row"><button class="ghost" id="dlLogo">Download SVG</button><button class="ghost" id="dlBible">Download Brand Bible (.md)</button></div>
-      </div>
-      <div class="card">
-        <h2 class="sec">Secondary marks</h2>
-        <div class="marks" id="marks"></div>
+
+    <div class="card" id="s1"><h2 class="sec"><b>01</b> · Brand essence</h2>
+      <p class="manifesto" id="manifesto"></p>
+      <h2 class="sec" style="margin-top:20px">Tagline portfolio</h2>
+      <div class="grid c3" id="taglines"></div>
+      <h2 class="sec" style="margin-top:20px">Guiding principles</h2>
+      <div class="grid c4" id="pillars"></div>
+    </div>
+
+    <div class="card" id="s2"><h2 class="sec"><b>02</b> · Logo &amp; marks</h2>
+      <div class="grid c2">
+        <div><div class="svgbox" id="logoBox"></div>
+          <div class="row"><button class="ghost" id="dlLogo">Download SVG</button><button class="ghost" id="dlJson">Download JSON</button></div></div>
+        <div><div class="marks" id="marks"></div></div>
       </div>
     </div>
-    <div class="card" style="margin-top:18px">
-      <h2 class="sec">Colour palette — click a card to copy its hex</h2>
+
+    <div class="card" id="s3"><h2 class="sec"><b>03</b> · Five-colour palette — click a card to copy its hex</h2>
       <div class="pal" id="pal"></div>
     </div>
-    <div class="card" style="margin-top:18px">
-      <h2 class="sec">Typography pairing</h2>
-      <div class="fonts" id="fonts"></div>
+
+    <div class="card" id="s4"><h2 class="sec"><b>04</b> · Typography pairing</h2>
+      <div class="grid c2" id="fonts"></div>
     </div>
-    <div class="card" style="margin-top:18px">
-      <h2 class="sec">Brand voice</h2>
-      <ul class="voice" id="voice"></ul>
+
+    <div class="card" id="s5"><h2 class="sec"><b>05</b> · Voice &amp; vocabulary</h2>
+      <div class="grid c2"><div class="spec-row" id="spectrums"></div>
+      <div><table id="vocab"><thead><tr><th>Preferred</th><th>Avoid</th><th>Why</th></tr></thead><tbody></tbody></table></div></div>
+      <ul class="spec-row" id="voice" style="margin-top:14px;padding-left:20px;display:revert"></ul>
+    </div>
+
+    <div class="card" id="s6"><h2 class="sec"><b>06</b> · Nomenclature governance — reserved &amp; public lexicon</h2>
+      <div class="grid c3">
+        <div class="tier res"><h3>Reserved · protected</h3><div id="lxRes"></div></div>
+        <div class="tier pub"><h3>Public · approved</h3><div id="lxPub"></div></div>
+        <div class="tier pro"><h3>Prohibited · banned</h3><div id="lxPro"></div></div>
+      </div>
+    </div>
+
+    <div class="card" id="s7"><h2 class="sec"><b>07</b> · Real-time copy &amp; trademark compliance auditor</h2>
+      <textarea id="draft" style="min-height:110px" placeholder="Paste draft marketing copy, a press release or a social caption…"></textarea>
+      <div class="row"><span class="status" id="audCount">0 characters</span>
+        <button class="ghost" id="audBad">Load hazard sample</button>
+        <button class="ghost" id="audGood">Load compliant sample</button></div>
+      <div class="aud-sum" id="audSum"></div>
+      <div id="audHaz"></div>
+      <div id="audInfo" class="status"></div>
+    </div>
+
+    <div class="card" id="s8"><h2 class="sec"><b>08</b> · Applications &amp; social</h2>
+      <div class="grid c4" id="apps"></div>
+      <h2 class="sec" style="margin-top:20px">Social voice</h2>
+      <div class="grid c3" id="social"></div>
+      <div class="row"><button class="ghost" id="dlBible">Export Brand Bible (.md)</button></div>
     </div>
   </div>
 </div>
@@ -136,105 +200,168 @@ function cleanSvg(s) {
   s = s.replace(/\son[a-z]+\s*=/gi, ' data-x=').replace(/(href|src)\s*=\s*["']\s*(javascript:|data:text\/html)[^"']*["']/gi, '');
   return /<svg/i.test(s) ? s : '';
 }
-function toast(msg) {
-  var t = $('#toast'); t.textContent = msg; t.classList.add('on');
-  setTimeout(function () { t.classList.remove('on'); }, 1800);
-}
-function copyHex(hex) {
-  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(hex).then(function () { toast(hex + ' copied'); }, function () { toast(hex); }); }
-  else toast(hex);
-}
-function loadFont(fam) {
-  var id = 'gf-' + fam.replace(/[^a-z0-9]/gi, '');
-  if (document.getElementById(id)) return id;
+function toast(m) { var t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(function () { t.classList.remove('on'); }, 1800); }
+function loadFont(f) {
+  var id = 'gf-' + f.replace(/[^a-z0-9]/gi, '');
+  if (document.getElementById(id)) return;
   var l = document.createElement('link'); l.id = id; l.rel = 'stylesheet';
-  l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fam) + ':wght@400;600;700;800&display=swap';
+  l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(f) + ':wght@400;600;700;800&display=swap';
   document.head.appendChild(l);
-  return id;
 }
+function rex(t) { return new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); }
+
 function render(d) {
   DATA = d;
+  $('#idx').innerHTML = [['s1','01 Essence'],['s2','02 Logo & Marks'],['s3','03 Palette'],['s4','04 Typography'],['s5','05 Voice'],['s6','06 Lexicon'],['s7','07 Auditor'],['s8','08 Applications']]
+    .map(function (x) { return '<a href="#' + x[0] + '">' + x[1] + '</a>'; }).join('');
   $('#bn').textContent = d.brand_name || 'Untitled brand';
   $('#tg').textContent = d.tagline || '';
   $('#pos').textContent = d.positioning || '';
-  $('#logoBox').innerHTML = cleanSvg(d.logo_svg) || '<span class="status">No logo returned — try again.</span>';
-  var mk = '';
-  (d.marks || []).forEach(function (m) { mk += '<div class="mark">' + cleanSvg(m.svg) + '<div class="nm">' + esc(m.name) + '</div></div>'; });
-  $('#marks').innerHTML = mk || '<span class="status">No secondary marks.</span>';
-  var pl = '';
-  (d.palette || []).forEach(function (p) {
-    pl += '<div class="sw" title="Copy ' + esc(p.hex) + '" data-hex="' + esc(p.hex) + '"><div class="chip" style="background:' + esc(p.hex) + '"></div>' +
-      '<div class="mt"><div class="hx">' + esc(p.hex) + '</div><div><b>' + esc(p.name) + '</b></div><div class="un">' + esc(p.usage) + '</div></div></div>';
-  });
-  $('#pal').innerHTML = pl;
+  $('#manifesto').textContent = d.manifesto || '';
+  $('#taglines').innerHTML = (d.taglines || []).map(function (t) {
+    return '<div class="tile"><div class="t">“' + esc(t.text) + '”</div><div class="d">' + esc(t.focus) + '</div></div>'; }).join('');
+  $('#pillars').innerHTML = (d.pillars || []).map(function (p) {
+    return '<div class="tile"><div class="k">' + esc(p.code) + '</div><div class="t">' + esc(p.name) + '</div><div class="d">' + esc(p.detail) + '</div></div>'; }).join('');
+  $('#logoBox').innerHTML = cleanSvg(d.logo_svg) || '<span class="status">No logo returned — re-forge.</span>';
+  $('#marks').innerHTML = (d.marks || []).map(function (m) {
+    return '<div class="mark">' + cleanSvg(m.svg) + '<div class="nm">' + esc(m.name) + '</div></div>'; }).join('');
+  $('#pal').innerHTML = (d.palette || []).map(function (p) {
+    return '<div class="sw" data-hex="' + esc(p.hex) + '" title="Copy ' + esc(p.hex) + '"><div class="chip" style="background:' + esc(p.hex) + '"></div><div class="mt"><div class="hx">' + esc(p.hex) + '</div><div><b>' + esc(p.name) + '</b></div><div class="un">' + esc(p.usage) + '</div></div></div>'; }).join('');
   Array.prototype.forEach.call(document.querySelectorAll('.sw'), function (el) {
-    el.addEventListener('click', function () { copyHex(el.getAttribute('data-hex')); });
+    el.addEventListener('click', function () { var h = el.getAttribute('data-hex');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(h).then(function () { toast(h + ' copied'); }, function () { toast(h); });
+      else toast(h); });
   });
   var fh = ((d.fonts || {}).header || {}), fb = ((d.fonts || {}).body || {});
-  var f1 = fh.family || 'Inter', f2 = fb.family || 'Inter';
-  loadFont(f1); loadFont(f2);
+  loadFont(fh.family || 'Inter'); loadFont(fb.family || 'Inter');
   $('#fonts').innerHTML =
-    '<div class="fcard"><div class="fam">Headers — ' + esc(f1) + '</div><div class="spec" style="font-family:\'' + esc(f1) + '\',serif">Brand Headline Aa</div><div class="why">' + esc(fh.why) + '</div></div>' +
-    '<div class="fcard"><div class="fam">Body — ' + esc(f2) + '</div><div class="spec" style="font-family:\'' + esc(f2) + '\',sans-serif;font-size:20px">Body copy reads calmly and clearly, line after line. Aa</div><div class="why">' + esc(fb.why) + '</div></div>';
-  var v = '';
-  (d.voice || []).forEach(function (r) { v += '<li>' + esc(r) + '</li>'; });
-  $('#voice').innerHTML = v || '<li>No voice rules returned.</li>';
+    '<div class="fcard"><div class="fam">Headers — ' + esc(fh.family) + '</div><div class="spec" style="font-family:\'' + esc(fh.family) + '\',serif">Brand Headline Aa</div><div class="why">' + esc(fh.why) + '</div></div>' +
+    '<div class="fcard"><div class="fam">Body — ' + esc(fb.family) + '</div><div class="spec" style="font-family:\'' + esc(fb.family) + '\',sans-serif;font-size:20px">Body copy reads calmly and clearly, line after line. Aa</div><div class="why">' + esc(fb.why) + '</div></div>';
+  $('#spectrums').innerHTML = (d.voice_spectrums || []).map(function (v) {
+    return '<div class="sp"><div class="lab"><span>' + esc(v.name) + '</span><span>' + v.score + '/100</span></div><div class="bar"><i style="width:' + v.score + '%"></i></div><div class="poles"><span>' + esc(v.low) + '</span><span>' + esc(v.high) + '</span></div><div class="note">' + esc(v.note) + '</div></div>'; }).join('');
+  $('#vocab tbody').innerHTML = (d.vocabulary || []).map(function (v) {
+    return '<tr><td class="good">' + esc(v.preferred) + '</td><td class="bad">' + esc(v.avoid) + '</td><td>' + esc(v.context) + '</td></tr>'; }).join('');
+  $('#voice').innerHTML = (d.voice || []).map(function (v) { return '<li>' + esc(v) + '</li>'; }).join('');
+  var L = d.lexicon || {};
+  $('#lxRes').innerHTML = (L.reserved || []).map(function (t) {
+    return '<div class="lx"><div class="tm">' + esc(t.term) + '</div><div class="rl">' + esc(t.rule) + '</div></div>'; }).join('');
+  $('#lxPub').innerHTML = (L.public || []).map(function (t) {
+    return '<div class="lx"><div class="tm">' + esc(t.term) + '</div><div class="rl"><b>' + esc(t.audience) + '</b> — ' + esc(t.usage) + '</div></div>'; }).join('');
+  $('#lxPro').innerHTML = (L.prohibited || []).map(function (t) {
+    return '<div class="lx"><div class="tm">' + esc(t.term) + '</div><div class="rl">' + esc(t.hazard) + '</div><div class="rl">' + esc(t.risk) + '</div><div class="ex bad">❌ ' + esc(t.bad) + '</div><div class="ex good">✅ ' + esc(t.good) + '</div><div class="alt">Use instead: ' + esc(t.alternative) + '</div></div>'; }).join('');
+  $('#apps').innerHTML = (d.applications || []).map(function (a) {
+    return '<div class="tile"><div class="t">' + esc(a.name) + '</div><div class="d">' + esc(a.note) + '</div></div>'; }).join('');
+  $('#social').innerHTML = (d.social || []).map(function (s) {
+    return '<div class="tile"><div class="k">' + esc(s.platform) + '</div><div class="d" style="margin-top:6px">' + esc(s.idea) + '</div></div>'; }).join('');
   $('#dash').style.display = 'block';
+  audit();
   $('#dash').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+function audit() {
+  if (!DATA) return;
+  var txt = $('#draft').value, L = DATA.lexicon || {};
+  $('#audCount').textContent = txt.length + ' characters';
+  var haz = [], res = [], pub = [];
+  (L.prohibited || []).forEach(function (t) { var m = txt.match(rex(t.term)); if (m) haz.push({ t: t, n: m.length }); });
+  (L.reserved || []).forEach(function (t) { var m = txt.match(rex(t.term)); if (m) res.push(t.term + ' ×' + m.length); });
+  (L.public || []).forEach(function (t) { var m = txt.match(rex(t.term)); if (m) pub.push(t.term + ' ×' + m.length); });
+  $('#audSum').innerHTML =
+    '<span class="pill h">' + haz.length + ' hazard(s)</span>' +
+    '<span class="pill r">' + res.length + ' reserved term(s)</span>' +
+    '<span class="pill p">' + pub.length + ' approved term(s)</span>';
+  $('#audHaz').innerHTML = haz.map(function (h, i) {
+    return '<div class="lx"><div class="tm">' + esc(h.t.term) + ' <span class="status">×' + h.n + '</span></div>' +
+      '<div class="rl">' + esc(h.t.hazard) + '</div><div class="rl">' + esc(h.t.risk) + '</div>' +
+      '<div class="ex bad">❌ ' + esc(h.t.bad) + '</div><div class="ex good">✅ ' + esc(h.t.good) + '</div>' +
+      '<button class="ghost fix" data-fix="' + i + '">Auto-fix → “' + esc(h.t.alternative) + '”</button></div>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-fix]'), function (b) {
+    b.addEventListener('click', function () {
+      var t = haz[parseInt(b.getAttribute('data-fix'), 10)].t;
+      $('#draft').value = $('#draft').value.replace(rex(t.term), t.alternative);
+      audit(); toast('Copy patched');
+    });
+  });
+  $('#audInfo').innerHTML = (res.length ? '<b>Reserved in use:</b> ' + esc(res.join(', ')) + ' — check casing &amp; ™ on first use.<br>' : '') +
+    (pub.length ? '<b>Approved vocabulary present:</b> ' + esc(pub.join(', ')) : '');
+}
+$('#draft').addEventListener('input', audit);
+$('#audBad').addEventListener('click', function () {
+  var P = ((DATA || {}).lexicon || {}).prohibited || [];
+  $('#draft').value = P.slice(0, 2).map(function (t) { return t.bad; }).join(' ') || 'No lexicon yet — forge a bible first.';
+  audit();
+});
+$('#audGood').addEventListener('click', function () {
+  var L = ((DATA || {}).lexicon || {});
+  $('#draft').value = ((L.prohibited || []).slice(0, 2).map(function (t) { return t.good; }).join(' ') + ' ' +
+    ((L.public || [])[0] ? (L.public[0].term + ' ') : '') + ((L.reserved || [])[0] ? (L.reserved[0].term + ' ™') : '')).trim() || 'No lexicon yet — forge a bible first.';
+  audit();
+});
+
 $('#go').addEventListener('click', function () {
   var mission = $('#mission').value.trim();
   $('#err').style.display = 'none';
   if (mission.length < 20) { $('#err').textContent = 'Describe the mission in at least 20 characters.'; $('#err').style.display = 'block'; return; }
   var btn = $('#go'); btn.disabled = true;
-  $('#status').innerHTML = '<span class="spin"></span> Forging logo, palette, type and voice…';
+  $('#status').innerHTML = '<span class="spin"></span> Forging manifesto, logo, palette, type, voice and legal lexicon…';
   fetch('/api/brandforge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mission: mission }) })
     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
     .then(function (res) {
       btn.disabled = false;
       if (!res.ok) {
-        var msg = (res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.';
-        $('#err').textContent = msg; $('#err').style.display = 'block';
-        $('#status').textContent = 'Ready when you are.';
-        return;
+        $('#err').textContent = (res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.';
+        $('#err').style.display = 'block'; $('#status').textContent = 'Ready when you are.'; return;
       }
-      $('#status').textContent = 'Brand Bible forged. Tweak the mission and re-forge anytime.';
+      $('#status').textContent = 'Brand Bible forged. Re-forge anytime — each pass is a fresh director.';
       render(res.j);
     })
     .catch(function () {
       btn.disabled = false;
       $('#err').textContent = 'Network error — check your connection and try again.';
-      $('#err').style.display = 'block';
-      $('#status').textContent = 'Ready when you are.';
+      $('#err').style.display = 'block'; $('#status').textContent = 'Ready when you are.';
     });
 });
 function dl(name, text, mime) {
   var b = new Blob([text], { type: mime || 'text/plain' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(b); a.download = name;
+  var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name;
   document.body.appendChild(a); a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
-$('#dlLogo').addEventListener('click', function () {
-  if (DATA && DATA.logo_svg) dl((DATA.brand_name || 'brand').replace(/\W+/g, '-').toLowerCase() + '-logo.svg', DATA.logo_svg, 'image/svg+xml');
-});
+function slug() { return ((DATA && DATA.brand_name) || 'brand').replace(/\W+/g, '-').toLowerCase(); }
+$('#dlLogo').addEventListener('click', function () { if (DATA && DATA.logo_svg) dl(slug() + '-logo.svg', DATA.logo_svg, 'image/svg+xml'); });
+$('#dlJson').addEventListener('click', function () { if (DATA) dl(slug() + '-brand-bible.json', JSON.stringify(DATA, null, 2), 'application/json'); });
 $('#dlBible').addEventListener('click', function () {
   if (!DATA) return;
-  var L = [];
-  L.push('# ' + (DATA.brand_name || 'Brand') + ' — Brand Bible', '');
-  L.push('> ' + (DATA.tagline || ''), '');
-  L.push('**Positioning:** ' + (DATA.positioning || ''), '');
-  L.push('## Palette', '');
-  (DATA.palette || []).forEach(function (p) { L.push('- `' + p.hex + '` **' + p.name + '** — ' + p.usage); });
-  L.push('', '## Typography', '');
-  L.push('- Headers: **' + (((DATA.fonts || {}).header || {}).family || '') + '** — ' + (((DATA.fonts || {}).header || {}).why || ''));
-  L.push('- Body: **' + (((DATA.fonts || {}).body || {}).family || '') + '** — ' + (((DATA.fonts || {}).body || {}).why || ''));
-  L.push('', '## Voice', '');
-  (DATA.voice || []).forEach(function (v) { L.push('- ' + v); });
-  L.push('', '## Marks', '');
-  L.push('Primary logo SVG and ' + (DATA.marks || []).length + ' secondary marks available in the BrandForge dashboard.');
-  L.push('', '---', 'Forged by BrandForge · My AI Pro · ' + new Date().toISOString().slice(0, 10));
-  dl((DATA.brand_name || 'brand').replace(/\W+/g, '-').toLowerCase() + '-brand-bible.md', L.join('\n'), 'text/markdown');
+  var L = DATA.lexicon || {}, f = DATA.fonts || {}, L2 = [];
+  L2.push('# ' + (DATA.brand_name || 'Brand') + ' — Brand Bible', '');
+  L2.push('> ' + (DATA.tagline || ''), '', '**Positioning:** ' + (DATA.positioning || ''), '');
+  L2.push('## 01 Brand Essence', '', '### Manifesto', '', DATA.manifesto || '', '', '### Tagline portfolio');
+  (DATA.taglines || []).forEach(function (t) { L2.push('- “' + t.text + '” —_' + t.focus + '_'); });
+  L2.push('', '### Guiding principles');
+  (DATA.pillars || []).forEach(function (p) { L2.push('- **' + p.code + ' ' + p.name + '** — ' + p.detail); });
+  L2.push('', '## 02 Logo & Marks', '', 'Primary logo and ' + (DATA.marks || []).length + ' secondary marks: see SVG exports in the dashboard.', '');
+  L2.push('## 03 Palette');
+  (DATA.palette || []).forEach(function (p) { L2.push('- `' + p.hex + '` **' + p.name + '** — ' + p.usage); });
+  L2.push('', '## 04 Typography', '', '- Headers: **' + (f.header || {}).family + '** — ' + (f.header || {}).why, '- Body: **' + (f.body || {}).family + '** — ' + (f.body || {}).why, '');
+  L2.push('## 05 Voice & Vocabulary', '', '### Spectrums');
+  (DATA.voice_spectrums || []).forEach(function (v) { L2.push('- ' + v.name + ': ' + v.score + '/100 (' + v.low + ' ↔ ' + v.high + ') — ' + v.note); });
+  L2.push('', '### Vocabulary protocol', '', '| Preferred | Avoid | Context |', '|---|---|---|');
+  (DATA.vocabulary || []).forEach(function (v) { L2.push('| ' + v.preferred + ' | ' + v.avoid + ' | ' + v.context + ' |'); });
+  L2.push('', '### Voice rules');
+  (DATA.voice || []).forEach(function (v) { L2.push('- ' + v); });
+  L2.push('', '## 06 Nomenclature Governance', '', '### Reserved');
+  (L.reserved || []).forEach(function (t) { L2.push('- **' + t.term + '** — ' + t.rule); });
+  L2.push('', '### Public');
+  (L.public || []).forEach(function (t) { L2.push('- **' + t.term + '** (' + t.audience + ') — ' + t.usage); });
+  L2.push('', '### Prohibited');
+  (L.prohibited || []).forEach(function (t) { L2.push('- **' + t.term + '** — hazard: ' + t.hazard + ' risk: ' + t.risk + ' use instead: ' + t.alternative); });
+  L2.push('', '## 07 Applications');
+  (DATA.applications || []).forEach(function (a) { L2.push('- **' + a.name + '** — ' + a.note); });
+  L2.push('', '## 08 Social voice');
+  (DATA.social || []).forEach(function (s) { L2.push('- **' + s.platform + '** — ' + s.idea); });
+  L2.push('', '---', 'Forged by BrandForge · My AI Pro · ' + new Date().toISOString().slice(0, 10));
+  dl(slug() + '-brand-bible.md', L2.join('\n'), 'text/markdown');
 });
 </script>
 </body>

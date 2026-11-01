@@ -1728,23 +1728,40 @@ async def security_headers(request: Request, call_next):
 # the configured provider; output is sanitised before it ever reaches a browser.
 
 _BRAND_SYSTEM = (
-    "You are BrandForge, an elite brand identity director. From a company mission you "
-    "design a complete, coherent brand identity. Respond with ONLY one valid JSON object, "
-    "no markdown fences, no commentary, with exactly these keys:\n"
-    '{"brand_name": string, "tagline": string (max 8 words), "positioning": string '
-    '(one sentence distilling the brand promise), '
+    "You are BrandForge, an elite brand identity director and trademark-compliance "
+    "counsel. From a company mission you design a complete, coherent brand identity and "
+    "its governance system. Respond with ONLY one valid JSON object, no markdown fences, "
+    "no commentary, with exactly these keys:\n"
+    '{"brand_name": string, "tagline": string (max 8 words), "positioning": string (one '
+    'sentence brand promise), "manifesto": string (60-110 word brand manifesto, punchy), '
+    '"taglines": [ {"text": string, "focus": string (strategic focus label)} ] exactly 3, '
+    '"pillars": [ {"code": "PILLAR_01"..., "name": string, "detail": string (1-2 sentences)} '
+    '] exactly 4, '
     '"logo_svg": string (one complete standalone <svg> primary logo, viewBox="0 0 512 512", '
-    "flat modern vector shapes only, no scripts, no external references, no text elements "
-    "longer than the brand initials, colours drawn from the palette below), "
-    '"marks": [ {"name": string, "svg": string (standalone <svg> viewBox="0 0 128 128", '
-    "monogram or simplified mark)} ] with 2 entries, "
-    '"palette": [ {"hex": "#RRGGBB", "name": string, "usage": string (where this colour '
-    'lives in the brand)} ] with exactly 5 entries ordered primary, secondary, accent, '
-    'neutral, ink, '
-    '"fonts": {"header": {"family": string (a real, current Google Fonts family), "why": '
-    'string}, "body": {"family": string (a real, current Google Fonts family), "why": string}}, '
-    '"voice": [ string, string, string ] (three concrete brand-voice rules). '
-    "Every colour and shape must reinforce the mission's industry and mood."
+    "flat modern vector shapes only, no scripts, no external references, no text longer "
+    "than the brand initials, colours from the palette), "
+    '"marks": [ {"name": string, "svg": string (standalone <svg> viewBox="0 0 128 128")} ] '
+    'exactly 2, '
+    '"palette": [ {"hex": "#RRGGBB", "name": string, "usage": string} ] exactly 5 ordered '
+    'primary, secondary, accent, neutral, ink, '
+    '"fonts": {"header": {"family": string (real current Google Fonts family), "why": '
+    'string}, "body": {"family": string (real current Google Fonts family), "why": string}}, '
+    '"voice_spectrums": [ {"name": string, "score": integer 1-100, "low": string (left pole '
+    'label), "high": string (right pole label), "note": string} ] exactly 4, '
+    '"vocabulary": [ {"preferred": string, "avoid": string, "context": string} ] exactly 4, '
+    '"lexicon": {"reserved": [ {"term": string, "rule": string (casing/trademark rule)} ] '
+    'exactly 4, "public": [ {"term": string, "audience": string, "usage": string (where to '
+    'use it)} ] exactly 5, "prohibited": [ {"term": string, "hazard": string (brand hazard), '
+    '"risk": string (regulatory/legal risk), "bad": string (example sentence using the '
+    'banned term), "good": string (compliant rewrite of that sentence), "alternative": '
+    'string (short approved replacement phrase)} ] exactly 5}, '
+    '"voice": [ string, string, string ] (three brand-voice rules), '
+    '"applications": [ {"name": string (touchpoint e.g. business card), "note": string '
+    '(how the identity applies)} ] exactly 4, '
+    '"social": [ {"platform": string, "idea": string (content idea in brand voice)} ] '
+    'exactly 3. '
+    "Every colour, shape, word and rule must reinforce the mission's industry, mood and "
+    "regulatory reality (FTC Green Guides / CMA / EU green-claims rules where relevant)."
 )
 
 
@@ -1792,7 +1809,7 @@ async def brandforge(request: Request):
     def _generate():
         client = OpenAI(api_key=key, base_url=base_url, timeout=180, max_retries=1)
         resp = client.chat.completions.create(
-            model=model, temperature=0.9, max_tokens=4000,
+            model=model, temperature=0.9, max_tokens=8000,
             messages=[{"role": "system", "content": _BRAND_SYSTEM},
                       {"role": "user", "content": f"Company mission: {mission}"}])
         return resp.choices[0].message.content or ""
@@ -1812,25 +1829,63 @@ async def brandforge(request: Request):
         data = json.loads(cleaned[lo:hi + 1])
     except ValueError:
         raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
+    def _s(v, n=200):
+        return str(v or "")[:n]
+
+    def _score(v):
+        try:
+            return max(1, min(100, int(v)))
+        except (TypeError, ValueError):
+            return 50
+
     data["logo_svg"] = _clean_svg(data.get("logo_svg"))
     marks = []
     for m in (data.get("marks") or [])[:3]:
         if isinstance(m, dict):
             svg = _clean_svg(m.get("svg"))
             if svg:
-                marks.append({"name": str(m.get("name") or "Mark")[:60], "svg": svg})
+                marks.append({"name": _s(m.get("name"), 60), "svg": svg})
     data["marks"] = marks
     palette = []
     for p in (data.get("palette") or [])[:5]:
         if isinstance(p, dict) and re.match(r"^#[0-9a-fA-F]{6}$", str(p.get("hex") or "")):
-            palette.append({"hex": str(p["hex"]).upper(), "name": str(p.get("name") or "")[:40],
-                            "usage": str(p.get("usage") or "")[:200]})
+            palette.append({"hex": str(p["hex"]).upper(), "name": _s(p.get("name"), 40),
+                            "usage": _s(p.get("usage"))})
     data["palette"] = palette
     fonts = data.get("fonts") if isinstance(data.get("fonts"), dict) else {}
-    data["fonts"] = {k: {"family": str((fonts.get(k) or {}).get("family") or "Inter")[:60],
-                         "why": str((fonts.get(k) or {}).get("why") or "")[:200]}
+    data["fonts"] = {k: {"family": _s((fonts.get(k) or {}).get("family") or "Inter", 60),
+                         "why": _s((fonts.get(k) or {}).get("why"))}
                      for k in ("header", "body")}
-    data["voice"] = [str(v)[:200] for v in (data.get("voice") or [])[:3]]
+    data["voice"] = [_s(v) for v in (data.get("voice") or [])[:3]]
+    data["manifesto"] = _s(data.get("manifesto"), 1400)
+    data["taglines"] = [{"text": _s(t.get("text"), 140), "focus": _s(t.get("focus"), 80)}
+                        for t in (data.get("taglines") or [])[:3] if isinstance(t, dict)]
+    data["pillars"] = [{"code": _s(p.get("code"), 20), "name": _s(p.get("name"), 70),
+                        "detail": _s(p.get("detail"), 400)}
+                       for p in (data.get("pillars") or [])[:4] if isinstance(p, dict)]
+    data["voice_spectrums"] = [{"name": _s(v.get("name"), 70), "score": _score(v.get("score")),
+                                "low": _s(v.get("low"), 50), "high": _s(v.get("high"), 50),
+                                "note": _s(v.get("note"))}
+                               for v in (data.get("voice_spectrums") or [])[:4] if isinstance(v, dict)]
+    data["vocabulary"] = [{"preferred": _s(v.get("preferred"), 90), "avoid": _s(v.get("avoid"), 90),
+                           "context": _s(v.get("context"))}
+                          for v in (data.get("vocabulary") or [])[:4] if isinstance(v, dict)]
+    lex = data.get("lexicon") if isinstance(data.get("lexicon"), dict) else {}
+    data["lexicon"] = {
+        "reserved": [{"term": _s(t.get("term"), 90), "rule": _s(t.get("rule"), 400)}
+                     for t in (lex.get("reserved") or [])[:6] if isinstance(t, dict)],
+        "public": [{"term": _s(t.get("term"), 90), "audience": _s(t.get("audience"), 70),
+                    "usage": _s(t.get("usage"), 400)}
+                   for t in (lex.get("public") or [])[:8] if isinstance(t, dict)],
+        "prohibited": [{"term": _s(t.get("term"), 90), "hazard": _s(t.get("hazard"), 400),
+                        "risk": _s(t.get("risk"), 400), "bad": _s(t.get("bad"), 400),
+                        "good": _s(t.get("good"), 400), "alternative": _s(t.get("alternative"), 140)}
+                       for t in (lex.get("prohibited") or [])[:8] if isinstance(t, dict)],
+    }
+    data["applications"] = [{"name": _s(a.get("name"), 70), "note": _s(a.get("note"))}
+                            for a in (data.get("applications") or [])[:4] if isinstance(a, dict)]
+    data["social"] = [{"platform": _s(s.get("platform"), 50), "idea": _s(s.get("idea"), 400)}
+                      for s in (data.get("social") or [])[:3] if isinstance(s, dict)]
     return data
 
 
