@@ -308,20 +308,34 @@ $('#go').addEventListener('click', function () {
   fetch('/api/brandforge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mission: mission }) })
     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
     .then(function (res) {
-      btn.disabled = false;
-      if (!res.ok) {
-        $('#err').textContent = (res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.';
-        $('#err').style.display = 'block'; $('#status').textContent = 'Ready when you are.'; return;
-      }
-      $('#status').textContent = 'Brand Bible forged. Re-forge anytime — each pass is a fresh director.';
-      render(res.j);
+      if (!res.ok) { fail((res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.'); return; }
+      poll(res.j.job, Date.now());
     })
-    .catch(function () {
-      btn.disabled = false;
-      $('#err').textContent = 'Network error — check your connection and try again.';
-      $('#err').style.display = 'block'; $('#status').textContent = 'Ready when you are.';
-    });
+    .catch(function () { fail('Network error — check your connection and try again.'); });
 });
+function fail(msg) {
+  $('#go').disabled = false;
+  $('#err').textContent = msg; $('#err').style.display = 'block';
+  $('#status').textContent = 'Ready when you are.';
+}
+function poll(job, t0) {
+  if (Date.now() - t0 > 9 * 60000) { fail('The forge is taking unusually long — try again in a minute.'); return; }
+  fetch('/api/brandforge/' + job)
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (res.ok && res.j.status === 'running') {
+        $('#status').innerHTML = '<span class="spin"></span> Forging manifesto, logo, palette, type, voice and legal lexicon… ' + Math.round((Date.now() - t0) / 1000) + 's';
+        setTimeout(function () { poll(job, t0); }, 4000); return;
+      }
+      if (res.ok && res.j.status === 'done') {
+        $('#go').disabled = false;
+        $('#status').textContent = 'Brand Bible forged in ' + Math.round((Date.now() - t0) / 1000) + 's. Re-forge anytime — each pass is a fresh director.';
+        render(res.j); return;
+      }
+      fail((res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.');
+    })
+    .catch(function () { setTimeout(function () { poll(job, t0); }, 4000); });
+}
 function dl(name, text, mime) {
   var b = new Blob([text], { type: mime || 'text/plain' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name;

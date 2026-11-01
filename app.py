@@ -1837,87 +1837,7 @@ def _clean_svg(raw) -> str:
     return s if "<svg" in s.lower() else ""
 
 
-@app.get("/brandforge", response_class=HTMLResponse)
-def brandforge_page():
-    return FileResponse(BASE_DIR / "static" / "brandforge.html",
-                        headers={"Cache-Control": "no-cache"})
-
-
-@app.post("/api/brandforge")
-async def brandforge(request: Request):
-    try:
-        body = await request.json()
-    except ValueError:
-        raise HTTPException(400, "Invalid request.")
-    mission = str(body.get("mission") or "").strip()
-    if len(mission) < 20:
-        raise HTTPException(400, "Describe the company mission in at least 20 characters.")
-    if len(mission) > 4000:
-        raise HTTPException(400, "Keep the mission under 4000 characters.")
-    cfg = load_config()
-    key = get_api_key(request, cfg)
-    if not key:
-        raise HTTPException(400, "No AI provider connected yet - add an API key in Settings.")
-    visitor = billing.visitor_id(request)
-    admin_ok = _admin_given(request) or billing.is_owner(visitor)
-    if not admin_ok:
-        allowed, retry = ratelimit.hit(f"brand:{visitor}", 5, 86400)
-        if not allowed:
-            raise HTTPException(429, f"Brand Bible limit reached - try again in {retry // 3600 + 1} h.")
-    base_url = cfg.get("base_url", "").strip()
-    model = cfg.get("model", "").strip()
-
-    def _call(msgs):
-        # Same resilience as chat: provider model chain first, one retry on
-        # capacity errors, then the env-keyed federation rescues.
-        cands = [(key, base_url, model)]
-        cands += [(key, base_url, m) for m in _model_chain(cfg)]
-        for fed in _federation_providers():
-            cands.append((fed["key"], fed["base_url"], fed["model"]))
-        last = None
-        for ck, cbu, cmd in cands:
-            for attempt in (1, 2):
-                try:
-                    client = OpenAI(api_key=ck, base_url=cbu, timeout=240, max_retries=0)
-                    resp = client.chat.completions.create(
-                        model=cmd, temperature=0.9, max_tokens=8000, messages=msgs)
-                    return resp.choices[0].message.content or ""
-                except Exception as exc:
-                    last = exc
-                    st = getattr(exc, "status_code", None)
-                    if st in (400, 401, 403):
-                        break                      # wrong key/request: next provider
-                    if attempt == 1 and st in (408, 409, 429, 500, 503):
-                        time.sleep(3)              # capacity hiccup: one patient retry
-        raise last
-
-    def _generate():
-        # Two passes: identity+visuals, then voice+governance - each fits inside
-        # every provider's output cap, and part 2 inherits part 1's brand facts.
-        part_a = _parse_brand_json(_call(
-            [{"role": "system", "content": _BRAND_SYSTEM_A},
-             {"role": "user", "content": f"Company mission: {mission}"}]))
-        if not isinstance(part_a, dict):
-            return None
-        brief = (f"Brand: {part_a.get('brand_name', '')}. Tagline: {part_a.get('tagline', '')}. "
-                 f"Palette: {', '.join(p.get('hex', '') for p in part_a.get('palette', [])[:5])}. "
-                 f"Fonts: {part_a.get('fonts', {}).get('header', {}).get('family', '')} / "
-                 f"{part_a.get('fonts', {}).get('body', {}).get('family', '')}. "
-                 f"Mission: {mission}")
-        part_b = _parse_brand_json(_call(
-            [{"role": "system", "content": _BRAND_SYSTEM_B},
-             {"role": "user", "content": brief}]))
-        if isinstance(part_b, dict):
-            part_a.update(part_b)
-        return part_a
-
-    try:
-        data = await run_in_threadpool(_generate)
-    except Exception as exc:
-        raise HTTPException(502, friendly_error(exc, base_url, model))
-    if not isinstance(data, dict):
-        raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
-
+def _brand_validate(data: dict) -> dict:
     def _s(v, n=200):
         return str(v or "")[:n]
 
@@ -1975,6 +1895,130 @@ async def brandforge(request: Request):
                             for a in (data.get("applications") or [])[:4] if isinstance(a, dict)]
     data["social"] = [{"platform": _s(s.get("platform"), 50), "idea": _s(s.get("idea"), 400)}
                       for s in (data.get("social") or [])[:3] if isinstance(s, dict)]
+    return data
+
+_BRAND_JOBS: dict = {}
+_BRAND_JOBS_LOCK = threading.Lock()
+
+
+def _brand_call(cfg: dict, key: str, base_url: str, model: str, msgs: list) -> str:
+    """One BrandForge pass with chat-grade resilience: model chain, one patient
+    retry on capacity errors, then the env-keyed federation rescues, all under a
+    7-minute deadline so a wedged provider can't hang the worker forever."""
+    cands = [(key, base_url, model)]
+    cands += [(key, base_url, m) for m in _model_chain(cfg)]
+    for fed in _federation_providers():
+        cands.append((fed["key"], fed["base_url"], fed["model"]))
+    last, deadline = None, time.time() + 420
+    for ck, cbu, cmd in cands:
+        if time.time() > deadline:
+            break
+        for attempt in (1, 2):
+            try:
+                client = OpenAI(api_key=ck, base_url=cbu, timeout=150, max_retries=0)
+                resp = client.chat.completions.create(
+                    model=cmd, temperature=0.9, max_tokens=8000, messages=msgs)
+                return resp.choices[0].message.content or ""
+            except Exception as exc:
+                last = exc
+                st = getattr(exc, "status_code", None)
+                if st in (400, 401, 403):
+                    break
+                if attempt == 1 and st in (408, 409, 429, 500, 503):
+                    time.sleep(3)
+    if last is None:
+        last = RuntimeError("brand generation produced nothing")
+    raise last
+
+
+def _brand_generate(cfg: dict, key: str, base_url: str, model: str, mission: str):
+    part_a = _parse_brand_json(_brand_call(cfg, key, base_url, model, [
+        {"role": "system", "content": _BRAND_SYSTEM_A},
+        {"role": "user", "content": f"Company mission: {mission}"}]))
+    if not isinstance(part_a, dict):
+        return None
+    brief = (f"Brand: {part_a.get('brand_name', '')}. Tagline: {part_a.get('tagline', '')}. "
+             f"Palette: {', '.join(p.get('hex', '') for p in part_a.get('palette', [])[:5])}. "
+             f"Fonts: {part_a.get('fonts', {}).get('header', {}).get('family', '')} / "
+             f"{part_a.get('fonts', {}).get('body', {}).get('family', '')}. "
+             f"Mission: {mission}")
+    part_b = _parse_brand_json(_brand_call(cfg, key, base_url, model, [
+        {"role": "system", "content": _BRAND_SYSTEM_B},
+        {"role": "user", "content": brief}]))
+    if isinstance(part_b, dict):
+        part_a.update(part_b)
+    return part_a
+
+
+def _brand_worker(job: str, cfg: dict, key: str, base_url: str, model: str, mission: str):
+    try:
+        data = _brand_generate(cfg, key, base_url, model, mission)
+        if not isinstance(data, dict):
+            raise RuntimeError("unreadable draft")
+        data = _brand_validate(data)
+        with _BRAND_JOBS_LOCK:
+            _BRAND_JOBS[job] = {"status": "done", "result": data, "created": time.time()}
+    except Exception as exc:
+        with _BRAND_JOBS_LOCK:
+            _BRAND_JOBS[job] = {"status": "error", "created": time.time(),
+                                "error": friendly_error(exc, base_url, model)}
+
+
+@app.get("/brandforge", response_class=HTMLResponse)
+def brandforge_page():
+    return FileResponse(BASE_DIR / "static" / "brandforge.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/brandforge")
+async def brandforge(request: Request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid request.")
+    mission = str(body.get("mission") or "").strip()
+    if len(mission) < 20:
+        raise HTTPException(400, "Describe the company mission in at least 20 characters.")
+    if len(mission) > 4000:
+        raise HTTPException(400, "Keep the mission under 4000 characters.")
+    cfg = load_config()
+    key = get_api_key(request, cfg)
+    if not key:
+        raise HTTPException(400, "No AI provider connected yet - add an API key in Settings.")
+    visitor = billing.visitor_id(request)
+    admin_ok = _admin_given(request) or billing.is_owner(visitor)
+    if not admin_ok:
+        allowed, retry = ratelimit.hit(f"brand:{visitor}", 5, 86400)
+        if not allowed:
+            raise HTTPException(429, f"Brand Bible limit reached - try again in {retry // 3600 + 1} h.")
+    base_url = cfg.get("base_url", "").strip()
+    model = cfg.get("model", "").strip()
+
+    job = os.urandom(6).hex()
+    with _BRAND_JOBS_LOCK:
+        for j in [k for k, v in _BRAND_JOBS.items() if time.time() - v["created"] > 3600]:
+            _BRAND_JOBS.pop(j, None)
+        _BRAND_JOBS[job] = {"status": "running", "created": time.time()}
+    threading.Thread(target=_brand_worker, daemon=True,
+                     args=(job, dict(cfg), key, base_url, model, mission)).start()
+    return {"job": job}
+
+
+@app.get("/api/brandforge/{job}")
+def brandforge_result(job: str):
+    with _BRAND_JOBS_LOCK:
+        j = _BRAND_JOBS.get(job or "")
+    if not j:
+        raise HTTPException(404, "Unknown or expired forge job.")
+    if j["status"] == "running":
+        return {"status": "running"}
+    if j["status"] == "error":
+        raise HTTPException(502, j.get("error") or "The forge failed - try again.")
+    out = dict(j["result"])
+    out["status"] = "done"
+    return out
+
+    data = _brand_validate(data)
     return data
 
 
