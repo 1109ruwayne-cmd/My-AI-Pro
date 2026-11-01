@@ -1935,9 +1935,13 @@ def _brand_call(cfg: dict, key: str, base_url: str, model: str, msgs: list) -> s
 
 
 def _brand_generate(cfg: dict, key: str, base_url: str, model: str, mission: str):
-    part_a = _parse_brand_json(_brand_call(cfg, key, base_url, model, [
-        {"role": "system", "content": _BRAND_SYSTEM_A},
-        {"role": "user", "content": f"Company mission: {mission}"}]))
+    part_a = None
+    for _try in (1, 2):          # one retry: models occasionally hand back prose
+        part_a = _parse_brand_json(_brand_call(cfg, key, base_url, model, [
+            {"role": "system", "content": _BRAND_SYSTEM_A},
+            {"role": "user", "content": f"Company mission: {mission}"}]))
+        if isinstance(part_a, dict):
+            break
     if not isinstance(part_a, dict):
         return None
     brief = (f"Brand: {part_a.get('brand_name', '')}. Tagline: {part_a.get('tagline', '')}. "
