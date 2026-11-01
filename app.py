@@ -196,7 +196,7 @@ PROVIDERS = {
 }
 
 DEFAULT_CONFIG = {
-    "name": "My AI",
+    "name": "Smash AI",
     "creator": "Ruwayne",                # shown in the sidebar: "created by ..."
     "provider": "gemini",
     "base_url": PROVIDERS["gemini"]["base_url"],
@@ -454,7 +454,7 @@ IFIX_PERSONA = "\n".join([
     "to watch so it stays fixed.",
     "- Never answer 'just rebuild everything' when a targeted fix exists; never hand back "
     "broken placeholders; if the user's AI is fine and the problem is elsewhere, say so.",
-    "- You also fix YOURSELF: for problems with this site (My AI Pro), search your own "
+    "- You also fix YOURSELF: for problems with this site (Smash AI Pro), search your own "
     "source files (01-08) first and quote the exact function and change needed.",
     "",
 ])
@@ -464,7 +464,7 @@ def build_system_prompt(cfg: dict, ctx: dict, ifix: bool = False) -> str:
     """The AI's standing instructions. ctx["mode"] says how it gets to the files:
     "tools" = it searches them itself, "all" = full text below, "search" = keyword-search
     excerpts below, "empty" = no files yet."""
-    name = (cfg.get("name") or "My AI").strip()
+    name = (cfg.get("name") or "Smash AI").strip()
     strict = cfg.get("answer_mode") == "files_only"
     mode, files = ctx["mode"], ctx["files"]
     if strict:
@@ -694,7 +694,7 @@ def sse(obj: dict) -> str:
 
 
 # --------------------------------------------------------------------------- app
-app = FastAPI(title="My AI", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="Smash AI Pro", docs_url=None, redoc_url=None, openapi_url=None)
 kb = KnowledgeBase(KNOWLEDGE_DIR)
 threading.Thread(target=selfheal.watchdog, args=(lambda: kb, KNOWLEDGE_DIR), daemon=True).start()
 
@@ -717,13 +717,13 @@ def privacy_policy():
     """Public privacy policy - Google Play requires a hosted URL."""
     return """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy - My AI Pro</title>
+<title>Privacy Policy - Smash AI Pro</title>
 <style>body{font:16px/1.7 system-ui,sans-serif;color:#1c1f33;background:#f6f7fb;margin:0}
 main{max-width:760px;margin:0 auto;padding:40px 22px;background:#fff;min-height:100vh}
 h1{font-size:26px}h2{font-size:18px;margin-top:28px}a{color:#5b5bd6}</style></head>
 <body><main>
-<h1>Privacy Policy - My AI Pro</h1>
-<p>My AI Pro is owned and operated by Ruwayne Campher, South Africa.
+<h1>Privacy Policy - Smash AI Pro</h1>
+<p>Smash AI Pro is owned and operated by Ruwayne Campher, South Africa.
 This policy explains what the app and website collect, and what they do not.</p>
 <h2>What we collect</h2>
 <ul>
@@ -762,7 +762,7 @@ accepts it.</p>
 <h2>Contact</h2>
 <p>Ruwayne Campher, South Africa - 1109ruwayne@gmail.com, via the public
 repository github.com/1109ruwayne-cmd/My-AI-Pro (owner contact).</p>
-<p><a href="/">&larr; Back to My AI Pro</a></p>
+<p><a href="/">&larr; Back to Smash AI Pro</a></p>
 </main></body></html>"""
 
 
@@ -877,7 +877,7 @@ def owner_activate_page():
     password in that browser's session and walks it home to the 👑 pill."""
     return """<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Owner sign-in - My AI Pro</title>
+<title>Owner sign-in - Smash AI Pro</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eef0f7;
 font:16px/1.6 system-ui,sans-serif;color:#1c2033}main{max-width:520px;margin:24px;
 background:#fff;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(20,24,60,.12)}
@@ -996,7 +996,7 @@ async def set_config(request: Request):
     body = await request.json()
     cfg = load_config()
     if "name" in body:
-        cfg["name"] = str(body["name"]).strip()[:60] or "My AI"
+        cfg["name"] = str(body["name"]).strip()[:60] or "Smash AI"
     if "creator" in body:
         cfg["creator"] = str(body["creator"]).strip()[:40] or "Ruwayne"
     if body.get("provider") in PROVIDERS:
@@ -1265,7 +1265,7 @@ def stream_other_engine(cfg: dict, eid: str, request: Request, history: list, qu
                                                    connectors.engine_config(cfg, eid)["url"])})
     if not answer:
         yield sse({"type": "delta",
-                   "text": f"_({spec['label']} sent back nothing. Try again, or press 🧠 My AI to "
+                   "text": f"_({spec['label']} sent back nothing. Try again, or press 🧠 Smash AI to "
                            "answer it myself.)_"})
     # Remember anything the connector learned (Dify's conversation id, OpenHands' session…)
     if state != before:

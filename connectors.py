@@ -37,8 +37,8 @@ from openai import OpenAI
 # "kind" decides how we talk to it; "profile" adds free-model defaults for OpenAI-style ones.
 ENGINES = {
     "main": {
-        "label": "My AI",
-        "short": "My AI",
+        "label": "Smash AI",
+        "short": "Smash AI",
         "icon": "🧠",
         "kind": "main",
         "blurb": "Your AI's own brain, with your files. Coding, engineering, maths and cybersecurity.",

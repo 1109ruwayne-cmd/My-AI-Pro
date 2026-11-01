@@ -589,7 +589,7 @@ def trust_desk(action: str = "", bureau: str = "", creditor: str = "", account: 
                 "NCA caps; no written contract; holding ID books, bank cards or SASSA cards.\n"
                 "- Unregistered lending is a criminal matter: NCR 0860 627 627 / "
                 "complaints@ncr.org.za; loan-shark conduct also to SAPS.\n"
-                "- My AI Pro performs no bureau pull here - register checks are public and free.")
+                "- Smash AI Pro performs no bureau pull here - register checks are public and free.")
     if a == "cipc_company":
         return ("How to verify a company (CIPC):\n"
                 f"- Company named: {company or '[company name]'} "

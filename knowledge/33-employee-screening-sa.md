@@ -1,6 +1,6 @@
 # 33 - Employee Screening & Trust Files (South Africa)
 
-Added 2026-10-28. How My AI Pro keeps employee records (certificates + SARS tax numbers)
+Added 2026-10-28. How Smash AI Pro keeps employee records (certificates + SARS tax numbers)
 and how screening stays lawful. Backed by the `hr_file` skill (OWNER-ONLY) and `hrdesk.py`
 server-side store (hr.db).
 

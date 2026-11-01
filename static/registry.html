@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Registry - My AI Pro</title>
+<title>Registry - Smash AI Pro</title>
 <style>
 :root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);
 --accent:#5b5bd6;--accent2:#8b5cf6;--accent-soft:#edecff;--accent-ink:#4444c0;--ring:rgba(91,91,214,.16);
@@ -51,7 +51,7 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertic
 </style>
 </head>
 <body>
-<header><div class="logo">R</div><h1>Registry &middot; certifications, CIPC &amp; wireman's desk</h1><a href="/">&larr; Back to My AI</a></header>
+<header><div class="logo">R</div><h1>Registry &middot; certifications, CIPC &amp; wireman's desk</h1><a href="/">&larr; Back to Smash AI</a></header>
 <main>
   <div class="card" id="gate">
     <h3 style="margin-top:0"> Owner sign-in</h3>
@@ -567,7 +567,7 @@ function renderVerify(){
       '<td class="row">' + (r.status !== 'confirmed' ? '<button class="btn sm" data-vok="' + r.id + '" type="button">Confirmed</button>' : '') +
       (r.status !== 'mismatch' ? '<button class="btn sm" data-vno="' + r.id + '" type="button">Mismatch</button>' : '') +
       '<button class="btn sm danger" data-tdel="' + r.id + '" type="button">×</button></td></tr>'; }).join('') + '</table>'
-    : '<div class="help">No verification requests logged yet. Once QCTO onboards My AI Pro as a verification client, log every certificate you run through verification.qcto.org.za here.</div>';
+    : '<div class="help">No verification requests logged yet. Once QCTO onboards Smash AI Pro as a verification client, log every certificate you run through verification.qcto.org.za here.</div>';
   el.querySelectorAll('[data-vok]').forEach(function(b){
     b.addEventListener('click', function(){
       api('/api/reg/traffic/' + b.getAttribute('data-vok'), { method: 'POST', headers: {'Content-Type': 'application/json'},

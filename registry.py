@@ -1,4 +1,4 @@
-"""My AI Pro Registry - personal SA certification, CIPC & wireman's licence desk.
+"""Smash AI Pro Registry - personal SA certification, CIPC & wireman's licence desk.
 
 A private vault + checklist manager for the owner's own certifications, companies
 and licences; a state-application pack builder (Department of Employment and
@@ -276,7 +276,7 @@ def build_pack_bytes(item: dict, docs: list) -> bytes:
                 f"ID number: {get_kv('owner_id') or '-'}",
                 f"Address: {get_kv('owner_address') or '-'}",
                 f"Phone: {get_kv('owner_phone') or '-'}  Email: {get_kv('owner_email') or '-'}", "",
-                f"Packed {time.strftime('%Y-%m-%d %H:%M')} - My AI Pro Registry"]
+                f"Packed {time.strftime('%Y-%m-%d %H:%M')} - Smash AI Pro Registry"]
         z.writestr("SUMMARY.txt", "\n".join(summ))
         z.writestr("COVER-LETTER.txt", cover_letter(item))
         z.writestr("ANNEXURE-5- PREFILLED.txt", annexure5_text(item))
@@ -319,7 +319,7 @@ def annexure5_text(item: dict) -> str:
     tick = lambda *ks: "X" if any(k in cat for k in ks) else "___"
     return f"""OCCUPATIONAL HEALTH AND SAFETY ACT, 1993 - REGULATION 11(1)
 ELECTRICAL INSTALLATION REGULATIONS, 2009 - ANNEXURE 5
-APPLICATION FOR REGISTRATION AS A REGISTERED PERSON (pre-filled by My AI Pro Registry)
+APPLICATION FOR REGISTRATION AS A REGISTERED PERSON (pre-filled by Smash AI Pro Registry)
 
 1. Surname / full name:        {get_kv('owner_name') or '________________'}
 2. Identity number:            {get_kv('owner_id') or '________________'}
@@ -390,7 +390,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 <body><button onclick="window.print()">Print / save PDF</button>
 <div class="sheet">
 <div class="h">Republic of South Africa &middot; {title}</div>
-<div class="sub">National Road Traffic Act, 1996 (Act 93 of 1996) &middot; National Road Traffic Regulations, 2000 &middot; pre-filled by My AI Pro Registry</div>
+<div class="sub">National Road Traffic Act, 1996 (Act 93 of 1996) &middot; National Road Traffic Regulations, 2000 &middot; pre-filled by Smash AI Pro Registry</div>
 <div class="frow"><div class="fbox"><label>Surname</label><div class="val">{surname}</div></div>
 <div class="fbox"><label>First names</label><div class="val">{forenames}</div></div></div>
 <div class="frow"><div class="fbox"><label>Identity number</label><div class="val">{s.get('owner_id','')}</div></div>
@@ -451,7 +451,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 <body><button onclick="window.print()">Print / save PDF</button>
 <div class="sheet">
 <div class="h">Republic of South Africa &middot; {title}</div>
-<div class="sub">National Road Traffic Act, 1996 (Act 93 of 1996) &middot; National Road Traffic Regulations, 2000 &middot; pre-filled by My AI Pro Registry</div>
+<div class="sub">National Road Traffic Act, 1996 (Act 93 of 1996) &middot; National Road Traffic Regulations, 2000 &middot; pre-filled by Smash AI Pro Registry</div>
 <div class="frow"><div class="fbox"><label>Title holder - surname</label><div class="val">{surname}</div></div>
 <div class="fbox"><label>First names</label><div class="val">{forenames}</div></div>
 <div class="fbox"><label>Identity number</label><div class="val">{s.get('owner_id','')}</div></div></div>
@@ -520,7 +520,7 @@ def register(app, require_admin, bank_info) -> None:
         state = "VOID" if (cert and cert["voided"]) else ("VALID" if cert else "NOT FOUND")
         colour = "#1f9468" if state == "VALID" else "#cf4040"
         base = str(request.base_url).rstrip("/")
-        share_txt = quote(f"Verify certificate {code.upper()} ({state}) on the My AI Pro registry: "
+        share_txt = quote(f"Verify certificate {code.upper()} ({state}) on the Smash AI Pro registry: "
                           f"{base}/verify/{code.upper()}")
         og_holder = cert["holder"] if cert else "unknown holder"
         body = ""
@@ -536,9 +536,9 @@ def register(app, require_admin, bank_info) -> None:
 <button id="embcopy" type="button">Copy</button><div class="embcap">Paste on any website - shows a live verification badge for this credential.</div></div>"""
         return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify {code.upper()} - {state}</title>
-<meta name="description" content="Live credential verification: {code.upper()} ({state}), holder {og_holder}. My AI Pro registry, Ruwayne Campher, South Africa.">
+<meta name="description" content="Live credential verification: {code.upper()} ({state}), holder {og_holder}. Smash AI Pro registry, Ruwayne Campher, South Africa.">
 <meta property="og:title" content="Certificate {code.upper()} - {state}">
-<meta property="og:description" content="Live verification from the My AI Pro registry. Holder: {og_holder}.">
+<meta property="og:description" content="Live verification from the Smash AI Pro registry. Holder: {og_holder}.">
 <meta property="og:url" content="{base}/verify/{code.upper()}"><meta property="og:type" content="website">
 <style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f7fc;font:16px/1.7 system-ui,sans-serif;color:#181b2e}}
 main{{max-width:560px;margin:24px;background:#fff;border:1px solid #e3e4ef;border-radius:20px;padding:28px;box-shadow:0 10px 28px rgba(20,22,44,.07)}}
@@ -552,7 +552,7 @@ code{{font-family:ui-monospace,monospace;background:#f4f4fa;border-radius:6px;pa
 #embcopy{{margin-top:8px;font:600 12px system-ui;padding:6px 12px;border-radius:8px;border:1px solid #5b5bd6;background:#5b5bd6;color:#fff;cursor:pointer}}
 .embcap{{color:#64698a;font-size:12px;margin-top:6px}}</style></head>
 <body><main><h1>Certificate verification</h1><p><code>{code.upper()}</code> &nbsp;<span class="st">{state}</span></p>{body}{actions}
-<p style="color:#64698a;font-size:13px">Issued under the name of Ruwayne Campher - My AI Pro Registry.
+<p style="color:#64698a;font-size:13px">Issued under the name of Ruwayne Campher - Smash AI Pro Registry.
 Questions: 1109ruwayne@gmail.com</p></main>
 <script>
 var b=document.getElementById('embbtn'),x=document.getElementById('embbox'),cp=document.getElementById('embcopy');
@@ -677,7 +677,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
         base = str(request.base_url).rstrip("/")
         return JSONResponse({"@context": "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json",
             "id": base + "/api/reg/issuer", "type": ["Profile"],
-            "name": "Ruwayne Campher - My AI Pro Registry",
+            "name": "Ruwayne Campher - Smash AI Pro Registry",
             "url": base + "/registry",
             "address": "Republic of South Africa",
             "description": ("Private certification and verification register of Ruwayne Campher. Every credential it issues is "
@@ -701,7 +701,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
                 "type": ["VerifiableCredential", "OpenBadgeCredential"],
                 "name": cert["ctype"],
                 "issuer": {"id": base + "/api/reg/issuer", "type": ["Profile"],
-                           "name": "Ruwayne Campher - My AI Pro Registry"},
+                           "name": "Ruwayne Campher - Smash AI Pro Registry"},
                 "validFrom": (cert["issued_on"] or "2026-01-01") + "T00:00:00Z",
                 "credentialSubject": {"type": ["AchievementSubject"], "name": cert["holder"],
                     "achievement": {"id": base + "/api/reg/badge/" + cert["code"], "type": ["Achievement"],
@@ -777,7 +777,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
         p.drawString(50, 78, "Machine-readable API: " + base + "/api/reg/verify/" + c["code"])
         p.setFont("Helvetica-Oblique", 9)
         p.drawString(50, 56, "This report is generated live from the registry. Status can change (renewal, revocation) -")
-        p.drawString(50, 44, "always confirm at the verification URL above. (c) 2026 Ruwayne Campher - My AI Pro.")
+        p.drawString(50, 44, "always confirm at the verification URL above. (c) 2026 Ruwayne Campher - Smash AI Pro.")
         p.showPage()
         p.save()
         return Response(content=buf.getvalue(), media_type="application/pdf",
@@ -819,7 +819,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 @media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0;border:none}}}}</style></head>
 <body><button onclick="window.print()">Print / save PDF</button>
 <div class="sheet">
-<div class="head">Ruwayne Campher &middot; My AI Pro Registry &middot; Republic of South Africa</div>
+<div class="head">Ruwayne Campher &middot; Smash AI Pro Registry &middot; Republic of South Africa</div>
 <h1>Letter of Verification &amp; Direct Acceptance</h1>
 <p class="sub">Certificate {cert['code']} &middot; issued {cert['issued_on'] or '-'}{(' &middot; valid until ' + cert['expires_on']) if cert['expires_on'] else ''}</p>
 <p>To the admissions office, human-resources department, licensing authority or other verifying body:</p>
@@ -846,13 +846,13 @@ fingerprint above must match the API response. Trust policy, issuer identity and
     def trust_page(request: Request):
         base = str(request.base_url).rstrip("/")
         return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Trust &amp; Acceptance Policy - My AI Pro Registry</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Trust &amp; Acceptance Policy - Smash AI Pro Registry</title>
 <style>body{{margin:0;background:#0f1222;color:#e8eaf6;font-family:system-ui,sans-serif;line-height:1.7}}
 .wrap{{max-width:860px;margin:0 auto;padding:56px 28px}} h1{{font-size:30px;margin:0 0 6px}} h2{{font-size:17px;color:#9aa4ff;margin:34px 0 8px}}
 .k{{color:#8b93b8;font-size:13px}} code,pre{{background:#181c33;border:1px solid #2a2f52;border-radius:8px;padding:2px 6px;font-size:12.5px}}
 pre{{padding:12px 14px;overflow:auto}} li{{margin:6px 0}} a{{color:#9aa4ff}}</style></head><body><div class="wrap">
 <h1>Trust &amp; Acceptance Policy</h1>
-<div class="k">My AI Pro Registry &middot; Ruwayne Campher &middot; Republic of South Africa &middot; &copy; 2026</div>
+<div class="k">Smash AI Pro Registry &middot; Ruwayne Campher &middot; Republic of South Africa &middot; &copy; 2026</div>
 <h2>1 &middot; Issuer</h2>
 <p>Credentials are issued by <b>Ruwayne Campher</b>, owner and registered verifier of this private register
 (<a href="{base}/registry">console</a>, owner-gated). Each credential carries the issuer's handwritten signature and the
@@ -1017,7 +1017,7 @@ button{{position:fixed;top:14px;right:14px;font:600 14px system-ui;padding:10px 
 @media print{{button{{display:none}}body{{background:#fff}}.sheet{{margin:0}}}}</style></head>
 <body><button onclick="window.print()">Print / save PDF</button>
 <div class="sheet"><div class="wm">UNOFFICIAL RECORD<br>NOT A LICENCE</div>
-<div class="head">My AI Pro Registry &middot; Personal Licence Record</div>
+<div class="head">Smash AI Pro Registry &middot; Personal Licence Record</div>
 <div class="sub">Private register of Ruwayne Campher &middot; record printed {today} &middot; this card is NOT a learner's or driving
 licence and confers no right to drive on any road.</div>
 <div class="grid2">

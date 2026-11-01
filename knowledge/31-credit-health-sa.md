@@ -1,7 +1,7 @@
 # Credit health in South Africa - your rights, free reports, disputes
 
-My AI Pro's SA Trust Desk: guidance, letters and public-register checks for
-credit matters. Defensive and lawful only - My AI Pro never pulls anyone's
+Smash AI Pro's SA Trust Desk: guidance, letters and public-register checks for
+credit matters. Defensive and lawful only - Smash AI Pro never pulls anyone's
 bureau record without a bureau/reseller agreement, a permissible purpose under
 the National Credit Act and the data subject's POPIA consent. It helps people
 use THEIR OWN rights instead.
@@ -73,11 +73,11 @@ to *look at a register*; consent IS needed to pull a person's bureau file.
 When a business (landlord, employer, lender) checks a PERSON's credit or
 records: purpose must be lawful (NCA permissible purpose), consent must be
 informed, specific and recorded, and only the minimum data processed. The Trust
-Desk skill (`consent_form`) drafts a POPIA-compliant consent document. My AI Pro
+Desk skill (`consent_form`) drafts a POPIA-compliant consent document. Smash AI Pro
 stores consent records in the owner's registry ledger when the owner begins
 offering bureau-backed checks under a reseller agreement.
 
-## What My AI Pro will and won't do
+## What Smash AI Pro will and won't do
 
 - WILL: explain rights, draft dispute/consent/paid-up letters, validate VAT
   number format, guide NCR/CIPC/SARS checks, log verify requests on the ledger.

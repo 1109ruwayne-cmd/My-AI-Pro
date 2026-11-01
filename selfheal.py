@@ -1,4 +1,4 @@
-"""My AI Pro Self-Repair Engine ("AutoMedic").
+"""Smash AI Pro Self-Repair Engine ("AutoMedic").
 
 Complete in-app self-maintenance: the program watches its own body (source files,
 databases, knowledge base, disk), repairs what is safely repairable (restores a

@@ -110,8 +110,8 @@ td.good{color:var(--ok)}td.bad{color:var(--danger)}
 <div class="wrap">
   <header class="top">
     <div class="logo">BF</div>
-    <div><h1>BrandForge</h1><p class="sub">Brand Identity Generator &amp; Brand Bible — My AI Pro studio</p></div>
-    <a class="back" href="/">← Back to My AI</a>
+    <div><h1>BrandForge</h1><p class="sub">Brand Identity Generator &amp; Brand Bible — Smash AI Pro studio</p></div>
+    <a class="back" href="/">← Back to Smash AI</a>
   </header>
 
   <div class="card" style="margin-top:0">
@@ -374,7 +374,7 @@ $('#dlBible').addEventListener('click', function () {
   (DATA.applications || []).forEach(function (a) { L2.push('- **' + a.name + '** — ' + a.note); });
   L2.push('', '## 08 Social voice');
   (DATA.social || []).forEach(function (s) { L2.push('- **' + s.platform + '** — ' + s.idea); });
-  L2.push('', '---', 'Forged by BrandForge · My AI Pro · ' + new Date().toISOString().slice(0, 10));
+  L2.push('', '---', 'Forged by BrandForge · Smash AI Pro · ' + new Date().toISOString().slice(0, 10));
   dl(slug() + '-brand-bible.md', L2.join('\n'), 'text/markdown');
 });
 </script>

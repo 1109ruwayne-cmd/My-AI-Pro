@@ -1,10 +1,11 @@
 {
-  "name": "My AI",
+  "name": "Smash AI Pro",
+  "creator": "Ruwayne",
   "provider": "gemini",
   "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
   "model": "gemini-3.8-flash",
   "answer_mode": "files_first",
-  "instructions": "You are My AI Pro, created and 100% owned by Ruwayne Campher (South Africa) - copyright (c) 2026 Ruwayne Campher, all rights reserved; your code, memory, brand, data and revenue belong solely to Ruwayne. The knowledge file '00-my-ai-pro-brain.md' is your complete self-knowledge: identity, ownership, features, 17 Agent Skills, pricing (15 free questions then My AI Pro at R49/month), EFT payment details (Capitec, reference required), owner lifetime access, and troubleshooting. Answer any question about yourself, your owner, this website, its prices, payments or errors accurately from that file, warmly and without guessing. Never ask for or reveal passwords or API keys in chat.",
+  "instructions": "You are Smash AI Pro, created and 100% owned by Ruwayne Campher (South Africa) - copyright (c) 2026 Ruwayne Campher, all rights reserved; your code, memory, brand, data and revenue belong solely to Ruwayne. The knowledge file '00-my-ai-pro-brain.md' is your complete self-knowledge: identity, ownership, features, 17 Agent Skills, pricing (15 free questions then Smash AI Pro at R49/month), EFT payment details (Capitec, reference required), owner lifetime access, and troubleshooting. Answer any question about yourself, your owner, this website, its prices, payments or errors accurately from that file, warmly and without guessing. Never ask for or reveal passwords or API keys in chat.",
   "context_chars": 60000,
   "history_messages": 20,
   "suggestions": [
@@ -18,9 +19,11 @@
   "reasoning_effort": "",
   "auto_route": true,
   "vtuber_audio": true,
+  "skills_enabled": true,
+  "ifixai": true,
   "engines": {
     "main": {
-      "enabled": false,
+      "enabled": true,
       "url": "",
       "model": "",
       "key": "",
@@ -85,7 +88,7 @@
     "free_prompts": 15,
     "free_tokens": 120000,
     "window": "lifetime",
-    "plan_name": "My AI Pro",
+    "plan_name": "Smash AI Pro",
     "price": "49",
     "currency": "ZAR",
     "interval": "month",
@@ -104,10 +107,32 @@
       "account_name": "Ruwayne Campher",
       "account_number": "1317339280",
       "branch": "470010",
-      "reference_note": ""
+      "reference_note": "Smash AI Pro subscription"
     },
-    "pay_note": ""
-  },
-  "creator": "Ruwayne",
-  "ifixai": true
+    "pay_note": "",
+    "verify_hours": 3,
+    "tiers": [
+      {
+        "id": "pro",
+        "name": "Smash AI Pro",
+        "price": "49",
+        "daily_prompts": 300,
+        "priority": false
+      },
+      {
+        "id": "plus",
+        "name": "Smash AI Pro Plus",
+        "price": "149",
+        "daily_prompts": 1000,
+        "priority": true
+      },
+      {
+        "id": "max",
+        "name": "Smash AI Pro Max",
+        "price": "249",
+        "daily_prompts": 3000,
+        "priority": true
+      }
+    ]
+  }
 }

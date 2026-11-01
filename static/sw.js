@@ -1,4 +1,4 @@
-/* My AI Pro service worker: offline shell only - chat and API always live. */
+/* Smash AI Pro service worker: offline shell only - chat and API always live. */
 var CACHE = 'myaipro-shell-v2';
 var SHELL = ['/', '/static/manifest.webmanifest', '/static/icon-192.png', '/static/icon-512.png'];
 

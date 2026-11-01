@@ -65,7 +65,7 @@ DEFAULT_BILLING = {
     "free_prompts": 15,            # how many questions a new visitor gets
     "free_tokens": 120000,         # and how many tokens (roughly words x 1.35)
     "window": "lifetime",          # "lifetime" or "monthly"
-    "plan_name": "My AI Pro",
+    "plan_name": "Smash AI Pro",
     "price": "49",                 # in major units, e.g. Rand
     "currency": "ZAR",
     "interval": "month",
@@ -73,11 +73,11 @@ DEFAULT_BILLING = {
     # own price and a per-24h fair-use allowance (0 = unlimited). "priority" tiers
     # get the doubled chat rate limit (served first when engines are busy).
     "tiers": [
-        {"id": "pro", "name": "My AI Pro", "price": "49",
+        {"id": "pro", "name": "Smash AI Pro", "price": "49",
          "daily_prompts": 300, "priority": False},
-        {"id": "plus", "name": "My AI Pro Plus", "price": "149",
+        {"id": "plus", "name": "Smash AI Pro Plus", "price": "149",
          "daily_prompts": 1000, "priority": True},
-        {"id": "max", "name": "My AI Pro Max", "price": "249",
+        {"id": "max", "name": "Smash AI Pro Max", "price": "249",
          "daily_prompts": 3000, "priority": True},
     ],
     "providers": {"manual": True, "stripe": False, "paystack": False},
@@ -122,7 +122,7 @@ def tiers_of(b: dict) -> list:
     """The tier ladder - falls back to a single tier from legacy plan/price fields."""
     tiers = [t for t in (_clean_tier(x) for x in (b.get("tiers") or [])) if t][:6]
     if not tiers:
-        tiers = [{"id": "pro", "name": b.get("plan_name") or "My AI Pro",
+        tiers = [{"id": "pro", "name": b.get("plan_name") or "Smash AI Pro",
                   "price": str(b.get("price") or "49"),
                   "daily_prompts": 0, "priority": False}]
     return tiers
@@ -139,7 +139,7 @@ def tier_by_id(b: dict, tid: str) -> dict:
 
 def tier_for_plan(b: dict, plan_name: str) -> dict | None:
     """Match a stored subscription's plan name to a tier.
-    Unknown names (old 'My AI Plus', 'owner grant') return None = grandfathered,
+    Unknown names (old 'Smash AI Plus', 'owner grant') return None = grandfathered,
     no daily cap, no priority."""
     name = str(plan_name or "").strip().lower()
     for t in tiers_of(b):

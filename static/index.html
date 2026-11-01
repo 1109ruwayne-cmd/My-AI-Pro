@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>My AI</title>
+<title>Smash AI Pro</title>
 <meta name="theme-color" content="#c9a35c">
 <link rel="manifest" href="static/manifest.webmanifest">
 <link rel="apple-touch-icon" href="static/icon-192.png">
@@ -17,7 +17,7 @@
 <script defer src="static/vendor/highlight/highlight.min.js"></script>
 <style>
 /* ============================================================
-   My AI Pro — "Atelier" interface
+   Smash AI Pro — "Atelier" interface
    Calm, editorial, precise. Layered ambient surfaces, hairline
    borders, one confident indigo→violet accent, full dark mode.
    ============================================================ */
@@ -538,7 +538,7 @@ details.adv[open] summary{margin-bottom:14px}
     <div class="brand">
       <div class="logo" id="logo">AI</div>
       <div class="brand-text">
-        <div class="brand-name" id="brandName">My AI</div>
+        <div class="brand-name" id="brandName">Smash AI</div>
         <div class="brand-sub">Code · Engineering · Your files</div>
       </div>
     </div>
@@ -583,7 +583,7 @@ details.adv[open] summary{margin-bottom:14px}
       <button class="icon-btn sidebtn" id="sideBtn" type="button" title="Show / hide the sidebar for more reading space" aria-label="Toggle sidebar">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/></svg>
       </button>
-      <div class="title" id="topTitle">My AI</div>
+      <div class="title" id="topTitle">Smash AI</div>
       <div class="pill" id="modelPill"></div>
       <div class="pill" id="usagePill" hidden title="Your free allowance"></div>
       <div class="spacer"></div>
@@ -685,7 +685,7 @@ details.adv[open] summary{margin-bottom:14px}
       </div>
       <div class="field">
         <label class="lbl" for="cfgName">Your AI's name</label>
-        <input class="input" id="cfgName" maxlength="60" placeholder="My AI">
+        <input class="input" id="cfgName" maxlength="60" placeholder="Smash AI">
       </div>
       <div class="field">
         <label class="lbl" for="cfgCreator">Created by (shown in the sidebar)</label>
@@ -1127,7 +1127,7 @@ details.adv[open] summary{margin-bottom:14px}
   }
   function initials(name) {
     var w = String(name || '').trim().split(/\s+/).filter(Boolean);
-    if (!w.length || /^my ai$/i.test(w.join(' '))) return 'AI';
+    if (!w.length || /^(my ai|smash ai( pro)?)$/i.test(w.join(' '))) return 'AI';
     return (w.length === 1 ? w[0].slice(0, 2) : w[0][0] + w[1][0]).toUpperCase();
   }
   function fmtSize(b) {
@@ -1694,7 +1694,7 @@ details.adv[open] summary{margin-bottom:14px}
     if (!strip) return;
     var specs = engineSpecs();
     var items = [{ id: 'auto', label: '✨ Auto', title: 'Pick the best AI for each question automatically' },
-                 { id: 'main', label: '🧠 My AI', title: 'Your AI itself: its own brain, your files, coding, engineering and cybersecurity' }];
+                 { id: 'main', label: '🧠 Smash AI', title: 'Your AI itself: its own brain, your files, coding, engineering and cybersecurity' }];
     engineOrder().forEach(function (id) {
       if (id === 'main') return;
       if (!engineReady(id)) return;
@@ -1956,7 +1956,7 @@ details.adv[open] summary{margin-bottom:14px}
     });
   }
 
-  function aiName() { return (S.status && S.status.config.name) || 'My AI'; }
+  function aiName() { return (S.status && S.status.config.name) || 'Smash AI'; }
   function aiConnected() {
     if (!S.status) return false;
     var c = S.status.config;
@@ -1971,7 +1971,7 @@ details.adv[open] summary{margin-bottom:14px}
     return api('api/status').then(function (st) {
       S.status = st;
       var c = st.config, ok = aiConnected();
-      document.title = c.name || 'My AI';
+      document.title = c.name || 'Smash AI';
       var cr = $('#creatorCredit');
       if (cr) { cr.textContent = 'created by '; var cb = document.createElement('b'); cb.textContent = c.creator || 'Ruwayne'; cr.appendChild(cb); }
       var cp = $('#copyrightLine');
@@ -2888,7 +2888,7 @@ details.adv[open] summary{margin-bottom:14px}
     setVal('#billTokens', B.free_tokens === undefined ? 120000 : B.free_tokens);
     setVal('#billWindow', B.window || 'lifetime');
     renderTierRows(B.tiers && B.tiers.length ? B.tiers
-      : [{ id: 'pro', name: B.plan_name || 'My AI Pro', price: B.price || '49',
+      : [{ id: 'pro', name: B.plan_name || 'Smash AI Pro', price: B.price || '49',
            daily_prompts: 0, priority: false }]);
     setVal('#billCurrency', B.currency || 'ZAR');
     setVal('#billInterval', B.interval || 'month');
@@ -3018,7 +3018,7 @@ details.adv[open] summary{margin-bottom:14px}
   function tierRowHtml(t) {
     t = t || { name: '', price: '', daily_prompts: 0, priority: false };
     return '<div class="bgrid tier-row" style="grid-template-columns:2fr 1fr 1fr auto auto;gap:6px;align-items:center">' +
-      '<input class="input t-name" placeholder="Plan name (e.g. My AI Pro)" maxlength="40" value="' + esc(t.name) + '">' +
+      '<input class="input t-name" placeholder="Plan name (e.g. Smash AI Pro)" maxlength="40" value="' + esc(t.name) + '">' +
       '<input class="input t-price" placeholder="Price" inputmode="decimal" value="' + esc(t.price) + '">' +
       '<input class="input t-daily" placeholder="Daily cap (0 = unlimited)" inputmode="numeric" value="' + (Number(t.daily_prompts) || 0) + '">' +
       '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" class="t-prio"' + (t.priority ? ' checked' : '') + '> priority</label>' +
@@ -3070,7 +3070,7 @@ details.adv[open] summary{margin-bottom:14px}
   function saveSettings() {
     var id = $('#cfgProvider').value, checked = document.querySelector('input[name=mode]:checked');
     var body = {
-      name: $('#cfgName').value.trim() || 'My AI',
+      name: $('#cfgName').value.trim() || 'Smash AI',
       creator: ($('#cfgCreator') ? $('#cfgCreator').value.trim() : '') || 'Ruwayne',
       provider: id,
       base_url: $('#cfgBaseUrl').value.trim(),

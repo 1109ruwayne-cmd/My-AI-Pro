@@ -1,6 +1,6 @@
 # Device lockout recovery - official routes only
 
-My AI Pro helps people who are locked out of their OWN devices, using only the
+Smash AI Pro helps people who are locked out of their OWN devices, using only the
 official, legal recovery routes. It never provides FRP-bypass tricks, lock
 exploits, password-cracking steps or ways to push software onto phones without
 the owner's enrolment - owner policy is defensive-only cybersecurity.
@@ -60,5 +60,5 @@ owner's credentials. The same idea exists as Activation Lock on Apple devices.
 - Use Find My Device / Find My to lock, message or erase remotely.
 - Never buy a phone that shows someone else's FRP/Activation lock.
 
-My AI Pro answers lockout questions from this file: official routes,
+Smash AI Pro answers lockout questions from this file: official routes,
 prevention and safety - and declines bypass/exploit requests politely.
