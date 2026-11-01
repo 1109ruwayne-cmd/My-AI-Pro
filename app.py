@@ -1807,12 +1807,30 @@ async def brandforge(request: Request):
     model = cfg.get("model", "").strip()
 
     def _generate():
-        client = OpenAI(api_key=key, base_url=base_url, timeout=180, max_retries=1)
-        resp = client.chat.completions.create(
-            model=model, temperature=0.9, max_tokens=8000,
-            messages=[{"role": "system", "content": _BRAND_SYSTEM},
-                      {"role": "user", "content": f"Company mission: {mission}"}])
-        return resp.choices[0].message.content or ""
+        # Same resilience as chat: provider model chain first, one retry on
+        # capacity errors, then the env-keyed federation rescues.
+        msgs = [{"role": "system", "content": _BRAND_SYSTEM},
+                {"role": "user", "content": f"Company mission: {mission}"}]
+        cands = [(key, base_url, model)]
+        cands += [(key, base_url, m) for m in _model_chain(cfg)]
+        for fed in _federation_providers():
+            cands.append((fed["key"], fed["base_url"], fed["model"]))
+        last = None
+        for ck, cbu, cmd in cands:
+            for attempt in (1, 2):
+                try:
+                    client = OpenAI(api_key=ck, base_url=cbu, timeout=150, max_retries=0)
+                    resp = client.chat.completions.create(
+                        model=cmd, temperature=0.9, max_tokens=8000, messages=msgs)
+                    return resp.choices[0].message.content or ""
+                except Exception as exc:
+                    last = exc
+                    st = getattr(exc, "status_code", None)
+                    if st in (400, 401, 403):
+                        break                      # wrong key/request: next provider
+                    if attempt == 1 and st in (408, 409, 429, 500, 503):
+                        time.sleep(3)              # capacity hiccup: one patient retry
+        raise last
 
     try:
         text = await run_in_threadpool(_generate)
