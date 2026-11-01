@@ -1751,22 +1751,25 @@ _BRAND_SYSTEM_A = _BRAND_COMMON + (
     'string}, "body": {"family": string (real current Google Fonts family), "why": string}}.'
 )
 _BRAND_SYSTEM_B = _BRAND_COMMON + (
-    "Part 2 of 2 - voice and governance for the brand given in the user message, with "
+    "Part 2 of 3 - voice and applications for the brand given in the user message, with "
     'exactly these keys: '
     '"voice_spectrums": [ {"name": string, "score": integer 1-100, "low": string (left pole '
     'label), "high": string (right pole label), "note": string} ] exactly 4, '
     '"vocabulary": [ {"preferred": string, "avoid": string, "context": string} ] exactly 4, '
-    '"lexicon": {"reserved": [ {"term": string, "rule": string (casing/trademark rule)} ] '
-    'exactly 4, "public": [ {"term": string, "audience": string, "usage": string (where to '
-    'use it)} ] exactly 5, "prohibited": [ {"term": string, "hazard": string (brand hazard), '
-    '"risk": string (regulatory/legal risk), "bad": string (example sentence using the '
-    'banned term), "good": string (compliant rewrite of that sentence), "alternative": '
-    'string (short approved replacement phrase)} ] exactly 5}, '
     '"voice": [ string, string, string ] (three brand-voice rules), '
     '"applications": [ {"name": string (touchpoint e.g. business card), "note": string} ] '
     'exactly 4, '
     '"social": [ {"platform": string, "idea": string (content idea in brand voice)} ] '
     "exactly 3."
+)
+_BRAND_SYSTEM_C = _BRAND_COMMON + (
+    "Part 3 of 3 - nomenclature governance for the brand given in the user message, with "
+    'exactly one key: "lexicon": {"reserved": [ {"term": string, "rule": string '
+    '(casing/trademark rule)} ] exactly 4, "public": [ {"term": string, "audience": string, '
+    '"usage": string (where to use it)} ] exactly 5, "prohibited": [ {"term": string, '
+    '"hazard": string (brand hazard), "risk": string (regulatory/legal risk), "bad": string '
+    '(example sentence using the banned term), "good": string (compliant rewrite of that '
+    'sentence), "alternative": string (short approved replacement phrase)} ] exactly 5}.'
 )
 
 
@@ -1947,6 +1950,11 @@ def _brand_generate(cfg: dict, key: str, base_url: str, model: str, mission: str
         {"role": "user", "content": brief}]))
     if isinstance(part_b, dict):
         part_a.update(part_b)
+    part_c = _parse_brand_json(_brand_call(cfg, key, base_url, model, [
+        {"role": "system", "content": _BRAND_SYSTEM_C},
+        {"role": "user", "content": brief}]))
+    if isinstance(part_c, dict):
+        part_a.update(part_c)
     return part_a
 
 
