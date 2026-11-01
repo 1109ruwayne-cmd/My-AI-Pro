@@ -1721,6 +1721,119 @@ async def security_headers(request: Request, call_next):
     return resp
 
 
+# ============================================================ BrandForge ----
+# Brand Identity Generator (owner's AI Studio concept, rebuilt natively 2026-11-01):
+# mission in -> "Brand Bible" JSON out (logo SVG, secondary marks, 5-colour palette
+# with usage notes, Google Font pairing, voice rules). Server-side generation uses
+# the configured provider; output is sanitised before it ever reaches a browser.
+
+_BRAND_SYSTEM = (
+    "You are BrandForge, an elite brand identity director. From a company mission you "
+    "design a complete, coherent brand identity. Respond with ONLY one valid JSON object, "
+    "no markdown fences, no commentary, with exactly these keys:\n"
+    '{"brand_name": string, "tagline": string (max 8 words), "positioning": string '
+    '(one sentence distilling the brand promise), '
+    '"logo_svg": string (one complete standalone <svg> primary logo, viewBox="0 0 512 512", '
+    "flat modern vector shapes only, no scripts, no external references, no text elements "
+    "longer than the brand initials, colours drawn from the palette below), "
+    '"marks": [ {"name": string, "svg": string (standalone <svg> viewBox="0 0 128 128", '
+    "monogram or simplified mark)} ] with 2 entries, "
+    '"palette": [ {"hex": "#RRGGBB", "name": string, "usage": string (where this colour '
+    'lives in the brand)} ] with exactly 5 entries ordered primary, secondary, accent, '
+    'neutral, ink, '
+    '"fonts": {"header": {"family": string (a real, current Google Fonts family), "why": '
+    'string}, "body": {"family": string (a real, current Google Fonts family), "why": string}}, '
+    '"voice": [ string, string, string ] (three concrete brand-voice rules). '
+    "Every colour and shape must reinforce the mission's industry and mood."
+)
+
+
+def _clean_svg(raw) -> str:
+    """Defang model-produced SVG: no scripts, no event handlers, no script/data URIs."""
+    s = str(raw or "")[:60000]
+    s = re.sub(r"<script.*?</script>", "", s, flags=re.S | re.I)
+    s = re.sub(r"\son[a-z]+\s*=", " data-x=", s, flags=re.I)
+    s = re.sub(r"(?:href|src)\s*=\s*[\"']\s*(?:javascript:|data:text/html)[^\"']*[\"']",
+               "", s, flags=re.I)
+    s = re.sub(r"<foreignObject.*?</foreignObject>", "", s, flags=re.S | re.I)
+    return s if "<svg" in s.lower() else ""
+
+
+@app.get("/brandforge", response_class=HTMLResponse)
+def brandforge_page():
+    return FileResponse(BASE_DIR / "static" / "brandforge.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/brandforge")
+async def brandforge(request: Request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid request.")
+    mission = str(body.get("mission") or "").strip()
+    if len(mission) < 20:
+        raise HTTPException(400, "Describe the company mission in at least 20 characters.")
+    if len(mission) > 4000:
+        raise HTTPException(400, "Keep the mission under 4000 characters.")
+    cfg = load_config()
+    key = get_api_key(request, cfg)
+    if not key:
+        raise HTTPException(400, "No AI provider connected yet - add an API key in Settings.")
+    visitor = billing.visitor_id(request)
+    admin_ok = _admin_given(request) or billing.is_owner(visitor)
+    if not admin_ok:
+        allowed, retry = ratelimit.hit(f"brand:{visitor}", 5, 86400)
+        if not allowed:
+            raise HTTPException(429, f"Brand Bible limit reached - try again in {retry // 3600 + 1} h.")
+    base_url = cfg.get("base_url", "").strip()
+    model = cfg.get("model", "").strip()
+
+    def _generate():
+        client = OpenAI(api_key=key, base_url=base_url, timeout=180, max_retries=1)
+        resp = client.chat.completions.create(
+            model=model, temperature=0.9, max_tokens=4000,
+            messages=[{"role": "system", "content": _BRAND_SYSTEM},
+                      {"role": "user", "content": f"Company mission: {mission}"}])
+        return resp.choices[0].message.content or ""
+
+    try:
+        text = await run_in_threadpool(_generate)
+    except Exception as exc:
+        raise HTTPException(502, friendly_error(exc, base_url, model))
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    lo, hi = cleaned.find("{"), cleaned.rfind("}")
+    if lo < 0 or hi <= lo:
+        raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
+    try:
+        data = json.loads(cleaned[lo:hi + 1])
+    except ValueError:
+        raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
+    data["logo_svg"] = _clean_svg(data.get("logo_svg"))
+    marks = []
+    for m in (data.get("marks") or [])[:3]:
+        if isinstance(m, dict):
+            svg = _clean_svg(m.get("svg"))
+            if svg:
+                marks.append({"name": str(m.get("name") or "Mark")[:60], "svg": svg})
+    data["marks"] = marks
+    palette = []
+    for p in (data.get("palette") or [])[:5]:
+        if isinstance(p, dict) and re.match(r"^#[0-9a-fA-F]{6}$", str(p.get("hex") or "")):
+            palette.append({"hex": str(p["hex"]).upper(), "name": str(p.get("name") or "")[:40],
+                            "usage": str(p.get("usage") or "")[:200]})
+    data["palette"] = palette
+    fonts = data.get("fonts") if isinstance(data.get("fonts"), dict) else {}
+    data["fonts"] = {k: {"family": str((fonts.get(k) or {}).get("family") or "Inter")[:60],
+                         "why": str((fonts.get(k) or {}).get("why") or "")[:200]}
+                     for k in ("header", "body")}
+    data["voice"] = [str(v)[:200] for v in (data.get("voice") or [])[:3]]
+    return data
+
+
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 # ---- Registry: personal SA certification / CIPC / wireman's licence desk ----

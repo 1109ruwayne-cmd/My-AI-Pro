@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrandForge — Brand Identity Generator</title>
+<meta name="theme-color" content="#c9a35c">
+<script>
+(function () {
+  var T = { gold: 1, aurora: 1, neon: 1, 'atelier-light': 1, 'atelier-dark': 1 }, t = '';
+  try { t = JSON.parse(localStorage.getItem('myai.theme') || '""') || ''; } catch (e) { t = ''; }
+  if (!T[t]) t = 'gold';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+:root{--bg:#f7f7fc;--surface:#fff;--surface2:#f4f4fa;--text:#181b2e;--muted:#64698a;--border:#e3e4ef;--hair:rgba(24,27,46,.07);--accent:#5b5bd6;--accent2:#8b5cf6;--accent-ink:#4444c0;--accent-soft:#edecff;--ring:rgba(91,91,214,.16);--shadow:0 1px 2px rgba(20,22,44,.04),0 10px 28px rgba(20,22,44,.07);--display:ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
+:root[data-theme="atelier-dark"]{--bg:#0d0f1f;--surface:#161a34;--surface2:#1c2040;--text:#e9ebfa;--muted:#98a0c6;--border:#272c4e;--hair:rgba(233,235,250,.08);--accent:#8a8af2;--accent2:#a78bfa;--accent-ink:#c0c0ff;--accent-soft:#232858;--ring:rgba(138,138,242,.28);--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.38)}
+:root[data-theme="gold"]{--bg:#14110c;--surface:#1e1913;--surface2:#251f17;--text:#f2e9d8;--muted:#b0a186;--border:#3b3123;--hair:rgba(242,233,216,.08);--accent:#c9a35c;--accent2:#e8cd94;--accent-ink:#e8cd94;--accent-soft:#31281a;--ring:rgba(201,163,92,.22);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);--display:"Hoefler Text",Garamond,Georgia,"Times New Roman",serif}
+:root[data-theme="aurora"]{--bg:#0a0f24;--surface:rgba(255,255,255,.065);--surface2:rgba(255,255,255,.10);--text:#edf2ff;--muted:#9dabcf;--border:rgba(255,255,255,.13);--hair:rgba(255,255,255,.09);--accent:#6ea8ff;--accent2:#c084fc;--accent-ink:#c3d8ff;--accent-soft:rgba(110,168,255,.15);--ring:rgba(110,168,255,.26);--shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.4)}
+:root[data-theme="neon"]{--bg:#05070e;--surface:#0b101e;--surface2:#101828;--text:#e8f7ff;--muted:#8296ae;--border:#182238;--hair:rgba(232,247,255,.07);--accent:#22d3ee;--accent2:#e879f9;--accent-ink:#8ceaf8;--accent-soft:#0e2334;--ring:rgba(34,211,238,.22);--shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px rgba(0,0,0,.5)}
+*{box-sizing:border-box}
+body{margin:0;font:15.5px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(1100px 520px at 88% -12%,var(--ring),transparent 62%),radial-gradient(900px 480px at -8% 112%,var(--ring),transparent 58%),var(--bg);background-attachment:fixed;min-height:100vh}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 80px}
+header.top{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 20px var(--ring)}
+:root[data-theme="gold"] .logo{color:#201809}
+h1{font-family:var(--display);font-size:26px;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
+.back{margin-left:auto;color:var(--accent-ink);text-decoration:none;font-size:13.5px;font-weight:600;border:1px solid var(--border);border-radius:10px;padding:7px 12px;background:var(--surface)}
+.back:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:20px}
+textarea{width:100%;min-height:96px;resize:vertical;border:1px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--text);padding:12px 14px;font:inherit}
+textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+button.go{border:0;border-radius:12px;padding:11px 22px;font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 18px var(--ring);cursor:pointer}
+:root[data-theme="gold"] button.go{color:#201809}
+button.go:disabled{opacity:.55;cursor:wait}
+button.ghost{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px 16px;font-weight:600;cursor:pointer}
+button.ghost:hover{border-color:var(--accent)}
+.status{color:var(--muted);font-size:13.5px}
+.err{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid #6a3538;background:#3a1e21;color:#ffb4b4;font-size:14px}
+:root[data-theme="atelier-light"] .err{background:#fdf1f1;border-color:#f2caca;color:#a33}
+#dash{display:none;margin-top:26px}
+.hero{text-align:center;padding:34px 22px}
+.hero .bn{font-family:var(--display);font-size:clamp(30px,5vw,44px);margin:0;letter-spacing:-.02em}
+.hero .tg{color:var(--accent-ink);font-size:17px;margin:8px 0 4px;font-weight:600}
+.hero .pos{color:var(--muted);max-width:640px;margin:6px auto 0}
+.grid{display:grid;gap:18px;margin-top:18px}
+@media(min-width:820px){.grid.two{grid-template-columns:1.1fr .9fr}}
+h2.sec{font-family:var(--display);font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px}
+.svgbox{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:18px;display:grid;place-items:center;min-height:220px}
+.svgbox svg{max-width:230px;max-height:230px;width:100%;height:auto}
+.marks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mark{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:14px;text-align:center}
+.mark svg{max-width:84px;max-height:84px}
+.mark .nm{font-size:12.5px;color:var(--muted);margin-top:8px}
+.pal{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:700px){.pal{grid-template-columns:repeat(2,1fr)}}
+.sw{border-radius:14px;overflow:hidden;border:1px solid var(--hair);cursor:pointer;background:var(--surface2)}
+.sw .chip{height:74px}
+.sw .mt{padding:9px 10px;font-size:11.5px;line-height:1.45}
+.sw .hx{font-family:var(--mono);font-weight:700;font-size:12px}
+.sw .un{color:var(--muted)}
+.fonts{display:grid;gap:14px}
+@media(min-width:700px){.fonts{grid-template-columns:1fr 1fr}}
+.fcard{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:16px}
+.fcard .spec{font-size:30px;line-height:1.2;margin:4px 0 8px}
+.fcard .fam{font-weight:700}
+.fcard .why{color:var(--muted);font-size:13px}
+.voice{margin:0;padding-left:20px;display:grid;gap:8px}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:inline-block;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 16px;box-shadow:var(--shadow);font-size:13.5px;opacity:0;transition:opacity .25s}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">BF</div>
+    <div><h1>BrandForge</h1><p class="sub">Brand Identity Generator &amp; Brand Bible — My AI Pro studio</p></div>
+    <a class="back" href="/">← Back to My AI</a>
+  </header>
+
+  <div class="card">
+    <h2 class="sec">The mission</h2>
+    <textarea id="mission" placeholder="e.g. We build affordable solar-powered cold rooms for small farms across the Eastern Cape, so harvests survive without grid power…"></textarea>
+    <div class="row">
+      <button class="go" id="go">Forge the Brand Bible</button>
+      <span class="status" id="status">Describe the company mission — the forge does the rest.</span>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="dash">
+    <div class="card hero">
+      <p class="bn" id="bn"></p>
+      <p class="tg" id="tg"></p>
+      <p class="pos" id="pos"></p>
+    </div>
+    <div class="grid two">
+      <div class="card">
+        <h2 class="sec">Primary logo</h2>
+        <div class="svgbox" id="logoBox"></div>
+        <div class="row"><button class="ghost" id="dlLogo">Download SVG</button><button class="ghost" id="dlBible">Download Brand Bible (.md)</button></div>
+      </div>
+      <div class="card">
+        <h2 class="sec">Secondary marks</h2>
+        <div class="marks" id="marks"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h2 class="sec">Colour palette — click a card to copy its hex</h2>
+      <div class="pal" id="pal"></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h2 class="sec">Typography pairing</h2>
+      <div class="fonts" id="fonts"></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h2 class="sec">Brand voice</h2>
+      <ul class="voice" id="voice"></ul>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var $ = function (s) { return document.querySelector(s); };
+var DATA = null;
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function cleanSvg(s) {
+  s = String(s || '');
+  s = s.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '');
+  s = s.replace(/\son[a-z]+\s*=/gi, ' data-x=').replace(/(href|src)\s*=\s*["']\s*(javascript:|data:text\/html)[^"']*["']/gi, '');
+  return /<svg/i.test(s) ? s : '';
+}
+function toast(msg) {
+  var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  setTimeout(function () { t.classList.remove('on'); }, 1800);
+}
+function copyHex(hex) {
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(hex).then(function () { toast(hex + ' copied'); }, function () { toast(hex); }); }
+  else toast(hex);
+}
+function loadFont(fam) {
+  var id = 'gf-' + fam.replace(/[^a-z0-9]/gi, '');
+  if (document.getElementById(id)) return id;
+  var l = document.createElement('link'); l.id = id; l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fam) + ':wght@400;600;700;800&display=swap';
+  document.head.appendChild(l);
+  return id;
+}
+function render(d) {
+  DATA = d;
+  $('#bn').textContent = d.brand_name || 'Untitled brand';
+  $('#tg').textContent = d.tagline || '';
+  $('#pos').textContent = d.positioning || '';
+  $('#logoBox').innerHTML = cleanSvg(d.logo_svg) || '<span class="status">No logo returned — try again.</span>';
+  var mk = '';
+  (d.marks || []).forEach(function (m) { mk += '<div class="mark">' + cleanSvg(m.svg) + '<div class="nm">' + esc(m.name) + '</div></div>'; });
+  $('#marks').innerHTML = mk || '<span class="status">No secondary marks.</span>';
+  var pl = '';
+  (d.palette || []).forEach(function (p) {
+    pl += '<div class="sw" title="Copy ' + esc(p.hex) + '" data-hex="' + esc(p.hex) + '"><div class="chip" style="background:' + esc(p.hex) + '"></div>' +
+      '<div class="mt"><div class="hx">' + esc(p.hex) + '</div><div><b>' + esc(p.name) + '</b></div><div class="un">' + esc(p.usage) + '</div></div></div>';
+  });
+  $('#pal').innerHTML = pl;
+  Array.prototype.forEach.call(document.querySelectorAll('.sw'), function (el) {
+    el.addEventListener('click', function () { copyHex(el.getAttribute('data-hex')); });
+  });
+  var fh = ((d.fonts || {}).header || {}), fb = ((d.fonts || {}).body || {});
+  var f1 = fh.family || 'Inter', f2 = fb.family || 'Inter';
+  loadFont(f1); loadFont(f2);
+  $('#fonts').innerHTML =
+    '<div class="fcard"><div class="fam">Headers — ' + esc(f1) + '</div><div class="spec" style="font-family:\'' + esc(f1) + '\',serif">Brand Headline Aa</div><div class="why">' + esc(fh.why) + '</div></div>' +
+    '<div class="fcard"><div class="fam">Body — ' + esc(f2) + '</div><div class="spec" style="font-family:\'' + esc(f2) + '\',sans-serif;font-size:20px">Body copy reads calmly and clearly, line after line. Aa</div><div class="why">' + esc(fb.why) + '</div></div>';
+  var v = '';
+  (d.voice || []).forEach(function (r) { v += '<li>' + esc(r) + '</li>'; });
+  $('#voice').innerHTML = v || '<li>No voice rules returned.</li>';
+  $('#dash').style.display = 'block';
+  $('#dash').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('#go').addEventListener('click', function () {
+  var mission = $('#mission').value.trim();
+  $('#err').style.display = 'none';
+  if (mission.length < 20) { $('#err').textContent = 'Describe the mission in at least 20 characters.'; $('#err').style.display = 'block'; return; }
+  var btn = $('#go'); btn.disabled = true;
+  $('#status').innerHTML = '<span class="spin"></span> Forging logo, palette, type and voice…';
+  fetch('/api/brandforge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mission: mission }) })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        var msg = (res.j && (res.j.detail || res.j.error)) || 'The forge hit a snag — try again.';
+        $('#err').textContent = msg; $('#err').style.display = 'block';
+        $('#status').textContent = 'Ready when you are.';
+        return;
+      }
+      $('#status').textContent = 'Brand Bible forged. Tweak the mission and re-forge anytime.';
+      render(res.j);
+    })
+    .catch(function () {
+      btn.disabled = false;
+      $('#err').textContent = 'Network error — check your connection and try again.';
+      $('#err').style.display = 'block';
+      $('#status').textContent = 'Ready when you are.';
+    });
+});
+function dl(name, text, mime) {
+  var b = new Blob([text], { type: mime || 'text/plain' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+$('#dlLogo').addEventListener('click', function () {
+  if (DATA && DATA.logo_svg) dl((DATA.brand_name || 'brand').replace(/\W+/g, '-').toLowerCase() + '-logo.svg', DATA.logo_svg, 'image/svg+xml');
+});
+$('#dlBible').addEventListener('click', function () {
+  if (!DATA) return;
+  var L = [];
+  L.push('# ' + (DATA.brand_name || 'Brand') + ' — Brand Bible', '');
+  L.push('> ' + (DATA.tagline || ''), '');
+  L.push('**Positioning:** ' + (DATA.positioning || ''), '');
+  L.push('## Palette', '');
+  (DATA.palette || []).forEach(function (p) { L.push('- `' + p.hex + '` **' + p.name + '** — ' + p.usage); });
+  L.push('', '## Typography', '');
+  L.push('- Headers: **' + (((DATA.fonts || {}).header || {}).family || '') + '** — ' + (((DATA.fonts || {}).header || {}).why || ''));
+  L.push('- Body: **' + (((DATA.fonts || {}).body || {}).family || '') + '** — ' + (((DATA.fonts || {}).body || {}).why || ''));
+  L.push('', '## Voice', '');
+  (DATA.voice || []).forEach(function (v) { L.push('- ' + v); });
+  L.push('', '## Marks', '');
+  L.push('Primary logo SVG and ' + (DATA.marks || []).length + ' secondary marks available in the BrandForge dashboard.');
+  L.push('', '---', 'Forged by BrandForge · My AI Pro · ' + new Date().toISOString().slice(0, 10));
+  dl((DATA.brand_name || 'brand').replace(/\W+/g, '-').toLowerCase() + '-brand-bible.md', L.join('\n'), 'text/markdown');
+});
+</script>
+</body>
+</html>

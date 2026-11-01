@@ -287,3 +287,15 @@ resilience + Brave/live_pulse data + the vertical skills Grok doesn't have.
   rescue fired LAST (paid, opt-in). Grok vs Groq: Groq = free inference host (gpt-oss);
   Grok = xAI's paid models. grok.com consumer accounts cannot be wired in (ToS); live X
   data = paid x_search ($5/1k posts) regardless of model.
+
+## BrandForge (added 2026-11-01)
+Brand Identity Generator - the owner's Google AI Studio concept ("BrandForge - Brand
+Identity Generator & Brand Bible") rebuilt natively so it lives inside My AI Pro instead
+of a Google account. Route GET /brandforge (themed standalone page, syncs the active
+theme preset from localStorage) + POST /api/brandforge: mission in -> strict-JSON Brand
+Bible out (primary logo SVG, 2 secondary marks, exactly-5 hex palette with usage notes,
+Google Fonts header/body pairing with rationale, 3 voice rules) via the configured
+provider. Server-side SVG sanitiser (_clean_svg) strips scripts/event-handlers/script
+URIs before the browser ever sees them; palette hex validated; guest limit 5 bibles/day
+via ratelimit (owner exempt). Page offers SVG + .md Brand Bible downloads and live font
+specimens. Sidebar "Brand Bible" button links to it.
