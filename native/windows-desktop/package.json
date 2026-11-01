@@ -1,0 +1,48 @@
+{
+  "name": "smash-ai-pro",
+  "productName": "Smash AI Pro",
+  "version": "1.0.0",
+  "description": "Smash AI Pro - the full AI studio desktop app",
+  "main": "main.js",
+  "author": {
+    "name": "Ruwayne Campher",
+    "email": "1109ruwayne@gmail.com"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "app.smashaipro",
+    "productName": "Smash AI Pro",
+    "artifactName": "SmashAIPro-Setup-${version}.exe",
+    "files": [
+      "main.js",
+      "offline.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Smash AI Pro"
+    }
+  },
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.18.0"
+  }
+}
