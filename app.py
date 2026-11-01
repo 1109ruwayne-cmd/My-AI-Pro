@@ -1765,6 +1765,62 @@ _BRAND_SYSTEM = (
 )
 
 
+def _parse_brand_json(text: str):
+    """Parse the model's Brand Bible JSON. If the output was truncated by the
+    token limit, salvage it: close any open string/container so the head of the
+    bible survives (tail fields simply render as absent)."""
+    s = str(text or "").strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```[a-zA-Z]*\s*", "", s)
+        s = re.sub(r"\s*```$", "", s)
+    lo = s.find("{")
+    if lo < 0:
+        return None
+    s = s[lo:]
+    hi = s.rfind("}")
+    if hi > 0:
+        try:
+            return json.loads(s[:hi + 1])
+        except ValueError:
+            pass
+    out, stack, in_str, esc = [], [], False, False
+    for ch in s:
+        if in_str:
+            out.append(ch)
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        out.append(ch)
+        if ch == '"':
+            in_str = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]" and stack:
+            stack.pop()
+    if in_str:
+        if esc:
+            out.pop()          # dangling backslash: drop it, then close the string
+        out.append('"')
+    tail = "".join(out).rstrip()
+    if tail.endswith(","):
+        tail = tail[:-1]
+    m = re.search(r'(,|{)\s*"[^"]*"$', tail)   # dangling key with no value: drop it
+    if m:
+        tail = tail[:m.start(1)] + ("{" if m.group(1) == "{" else "")
+    elif tail.endswith(":"):
+        tail += "null"                          # key present, value cut: null it
+    for op in reversed(stack):
+        tail += "}" if op == "{" else "]"
+    try:
+        return json.loads(tail)
+    except ValueError:
+        return None
+
+
 def _clean_svg(raw) -> str:
     """Defang model-produced SVG: no scripts, no event handlers, no script/data URIs."""
     s = str(raw or "")[:60000]
@@ -1819,9 +1875,9 @@ async def brandforge(request: Request):
         for ck, cbu, cmd in cands:
             for attempt in (1, 2):
                 try:
-                    client = OpenAI(api_key=ck, base_url=cbu, timeout=150, max_retries=0)
+                    client = OpenAI(api_key=ck, base_url=cbu, timeout=240, max_retries=0)
                     resp = client.chat.completions.create(
-                        model=cmd, temperature=0.9, max_tokens=8000, messages=msgs)
+                        model=cmd, temperature=0.9, max_tokens=16000, messages=msgs)
                     return resp.choices[0].message.content or ""
                 except Exception as exc:
                     last = exc
@@ -1836,16 +1892,8 @@ async def brandforge(request: Request):
         text = await run_in_threadpool(_generate)
     except Exception as exc:
         raise HTTPException(502, friendly_error(exc, base_url, model))
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-    lo, hi = cleaned.find("{"), cleaned.rfind("}")
-    if lo < 0 or hi <= lo:
-        raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
-    try:
-        data = json.loads(cleaned[lo:hi + 1])
-    except ValueError:
+    data = _parse_brand_json(text)
+    if not isinstance(data, dict):
         raise HTTPException(502, "The brand engine returned an unreadable draft - try again.")
     def _s(v, n=200):
         return str(v or "")[:n]
