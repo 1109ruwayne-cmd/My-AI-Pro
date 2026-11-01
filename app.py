@@ -1761,7 +1761,10 @@ _BRAND_SYSTEM = (
     '"social": [ {"platform": string, "idea": string (content idea in brand voice)} ] '
     'exactly 3. '
     "Every colour, shape, word and rule must reinforce the mission's industry, mood and "
-    "regulatory reality (FTC Green Guides / CMA / EU green-claims rules where relevant)."
+    "regulatory reality (FTC Green Guides / CMA / EU green-claims rules where relevant). "
+    "Be terse: every usage/rule/hazard/risk/bad/good/why/note/detail string at most 25 "
+    "words; the complete JSON must stay under 11000 tokens and MUST include ALL keys, "
+    "including applications, social and voice at the end."
 )
 
 
