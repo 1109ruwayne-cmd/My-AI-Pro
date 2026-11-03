@@ -1997,6 +1997,12 @@ def creative_page():
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/press", response_class=HTMLResponse)
+def press_page():
+    return FileResponse(BASE_DIR / "static" / "press.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
 @app.post("/api/brandforge")
 async def brandforge(request: Request):
     try:
