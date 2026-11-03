@@ -90,17 +90,18 @@
 
     <div class="card">
       <span class="badge">Windows &middot; Quick launcher</span>
-      <h2>Smash AI Pro Launcher</h2>
-      <div class="meta">1.8 MB EXE &middot; any Windows with Edge or Chrome</div>
-      <p>Tiny native launcher: opens the studio in its own app window (no browser tabs or toolbars) using
-         the Edge/Chrome you already have. Zero extraction, zero fuss.</p>
+      <h2>Smash AI Pro Launcher 1.1 <span style="color:var(--gold);font-size:12px">(Rust)</span></h2>
+      <div class="meta">363 KB EXE &middot; any Windows with Edge or Chrome</div>
+      <p>Tiny native launcher &mdash; rebuilt in Rust, 5&times; smaller: opens the studio in its own app window
+         (no browser tabs or toolbars). New in 1.1: point it anywhere without a rebuild via
+         <code>--url=https://&hellip;</code> or a <code>smashaiipro.ini</code> (<code>URL=&hellip;</code>) next to the EXE.</p>
       <ol>
         <li>Download and double-click the EXE.</li>
         <li>SmartScreen: <b>More info &rarr; Run anyway</b>.</li>
         <li>Optional: right-click &rarr; Pin to taskbar / Send to Desktop.</li>
       </ol>
-      <a class="btn ghost" href="/static/downloads/SmashAIPro-Launcher-1.0.0.exe" download>Download EXE</a>
-      <div class="sha">SHA-256<br>3988db652b1ceb1d5c153ccbcc2ab30390f54ff40af6403140e1bb027f90b622</div>
+      <a class="btn ghost" href="/static/downloads/SmashAIPro-Launcher-1.1.exe" download>Download EXE</a>
+      <div class="sha">SHA-256<br>498b20f44a3d0a599c47ada58460b5ac32e4ff8f52033ab1a522823ff3bdc766</div>
     </div>
 
     <div class="card">
@@ -119,6 +120,13 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:16px">
+    <span class="badge">10-second intro &middot; 1080p &middot; studio-rendered</span>
+    <h2>Watch the intro</h2>
+    <p style="margin-bottom:8px">Every frame rendered in-house (PIL) and encoded with ffmpeg &mdash; no stock assets, no external tools.</p>
+    <video controls preload="metadata" style="width:100%;max-width:720px;border-radius:12px;border:1px solid var(--line);display:block;margin:0 auto" src="/static/media/smash-ai-pro-promo.mp4"></video>
+  </div>
+
   <div class="note">
     <b>Verifying a download (Windows):</b> open Command Prompt in the download folder and run
     <code>certutil -hashfile SmashAIPro-1.0.0.apk SHA256</code> &mdash; the printed value must match the
@@ -130,7 +138,7 @@
   </div>
 
   <footer>&copy; 2026 Ruwayne Campher &middot; Smash AI Pro&trade; &middot; All rights reserved<br>
-  Builds: v1.0.0 &middot; APK signed with the official Smash AI Pro release key &middot; Windows builds unsigned (SmartScreen applies)</footer>
+  Builds: APK v1.0.0 (signed) &middot; Launcher v1.1.0 (Rust) &middot; Desktop v1.0.0 &middot; Windows builds unsigned (SmartScreen applies)</footer>
 </div>
 </body>
 </html>
