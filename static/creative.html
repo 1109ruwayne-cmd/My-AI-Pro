@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creative Studio · Smash AI Pro</title>
+<meta name="description" content="Smash AI Pro Creative Studio: graphic design templates, video editing, and 3D text — all in your browser.">
+<meta name="theme-color" content="#0A0E1A">
+<style>
+  :root { --dark:#0A0E1A; --panel:#111827; --line:#1F2937; --gold:#D4AF37; --gold-soft:rgba(212,175,55,.14);
+          --text:#E8E6DF; --muted:#9A978C; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--dark); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px 18px 72px; }
+  a.back { color:var(--gold); text-decoration:none; font-size:14px; font-weight:600; }
+  header { display:flex; align-items:center; gap:14px; margin:14px 0 4px; }
+  .mark { width:50px; height:50px; border-radius:13px; border:2px solid var(--gold); color:var(--gold);
+          font-weight:800; font-size:28px; display:flex; align-items:center; justify-content:center; }
+  h1 { font-size:24px; margin:0; } h1 .tm { font-size:12px; vertical-align:super; color:var(--gold); }
+  .sub { color:var(--muted); font-size:13.5px; margin:4px 0 20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .tab { background:var(--panel); border:1px solid var(--line); color:var(--muted); padding:10px 20px;
+         border-radius:999px; font-size:14px; font-weight:700; cursor:pointer; }
+  .tab.active { color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
+  .pane { display:none; } .pane.active { display:block; }
+  .cols { display:grid; grid-template-columns:380px 1fr; gap:18px; align-items:start; }
+  @media (max-width:900px){ .cols { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .card h2 { font-size:16px; margin:0 0 12px; color:var(--gold); }
+  label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:12px 0 5px; text-transform:uppercase; letter-spacing:.5px; }
+  input[type=text], input[type=number], select, textarea {
+    width:100%; background:#0B101D; color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; }
+  input[type=file] { width:100%; color:var(--muted); font-size:13px; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--gold); }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .btn { display:inline-block; background:var(--gold); color:#0A0E1A; border:0; font-weight:800; font-size:14.5px;
+         border-radius:999px; padding:12px 24px; cursor:pointer; margin-top:16px; width:100%; }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  .btn.ghost { background:transparent; color:var(--gold); border:1.5px solid var(--gold); }
+  .pills { display:flex; flex-wrap:wrap; gap:8px; }
+  .pill { background:#0B101D; border:1px solid var(--line); color:var(--muted); padding:7px 13px; border-radius:999px;
+          font-size:12.5px; font-weight:700; cursor:pointer; }
+  .pill.sel { color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
+  .swatches { display:flex; gap:8px; flex-wrap:wrap; }
+  .sw { width:44px; height:30px; border-radius:8px; cursor:pointer; border:2px solid transparent; }
+  .sw.sel { border-color:var(--text); }
+  .preview { min-height:340px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+  .preview img, .preview video { max-width:100%; max-height:560px; border-radius:12px; border:1px solid var(--line); }
+  .hint { color:var(--muted); font-size:13px; text-align:center; }
+  .status { font-size:13px; color:var(--muted); margin-top:10px; min-height:18px; }
+  .status.err { color:#F87171; } .status.ok { color:#4ADE80; }
+  #glwrap { position:relative; width:100%; height:480px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#0A0E1A; }
+  #glwrap canvas { display:block; width:100%; height:100%; }
+  .btnrow { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .btnrow .btn { width:auto; margin-top:0; padding:10px 16px; font-size:13px; }
+  footer { margin-top:36px; text-align:center; font-size:11.5px; color:var(--muted); opacity:.75; }
+  .spin { display:inline-block; animation:sp 1s linear infinite; } @keyframes sp { to { transform:rotate(360deg);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&larr; Back to the studio</a>
+  <header><div class="mark">S</div><h1>Creative Studio<span class="tm">&trade;</span></h1></header>
+  <p class="sub">Design, video and 3D &mdash; built into Smash AI Pro. Designs and edits render on the studio server; 3D runs live in your browser.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-t="design">🎨 Graphic design</button>
+    <button class="tab" data-t="video">🎬 Video editing</button>
+    <button class="tab" data-t="threed">🧊 3D forge</button>
+  </div>
+
+  <!-- ================= DESIGN ================= -->
+  <div class="pane active" id="pane-design">
+    <div class="cols">
+      <div class="card">
+        <h2>DesignForge</h2>
+        <label>Template</label>
+        <div class="pills" id="tplPills">
+          <button class="pill sel" data-v="youtube">YouTube 1280×720</button>
+          <button class="pill" data-v="ig-post">IG post 1080²</button>
+          <button class="pill" data-v="story">Story 1080×1920</button>
+          <button class="pill" data-v="x-post">X post 1200×675</button>
+          <button class="pill" data-v="linkedin">LinkedIn 1584×396</button>
+          <button class="pill" data-v="card">Card 1050×600</button>
+          <button class="pill" data-v="poster">Poster A4</button>
+        </div>
+        <label>Title</label><input type="text" id="dTitle" maxlength="90" value="LAUNCH YOUR BRAND" />
+        <label>Subtitle</label><input type="text" id="dSub" maxlength="140" value="Professional identities in minutes" />
+        <label>Call-to-action (optional)</label><input type="text" id="dCta" maxlength="30" placeholder="Get started" />
+        <label>Palette</label>
+        <div class="swatches" id="palSw">
+          <div class="sw sel" data-v="gold" title="Luxury Gold" style="background:linear-gradient(135deg,#0A0E1A 40%,#D4AF37)"></div>
+          <div class="sw" data-v="ocean" title="Ocean" style="background:linear-gradient(135deg,#04121F 40%,#38BDF8)"></div>
+          <div class="sw" data-v="mono" title="Mono" style="background:linear-gradient(135deg,#101010 40%,#F5F5F5)"></div>
+          <div class="sw" data-v="sunset" title="Sunset" style="background:linear-gradient(135deg,#2B0B1A 40%,#FB923C)"></div>
+          <div class="sw" data-v="forest" title="Forest" style="background:linear-gradient(135deg,#071A10 40%,#4ADE80)"></div>
+          <div class="sw" data-v="royal" title="Royal" style="background:linear-gradient(135deg,#120A2B 40%,#A78BFA)"></div>
+        </div>
+        <label>Background style</label>
+        <div class="pills" id="stylePills">
+          <button class="pill sel" data-v="gradient">Gradient</button>
+          <button class="pill" data-v="radial">Radial</button>
+          <button class="pill" data-v="diagonal">Diagonal</button>
+          <button class="pill" data-v="waves">Waves</button>
+          <button class="pill" data-v="grid">Grid</button>
+          <button class="pill" data-v="solid">Solid</button>
+        </div>
+        <label>Layout</label>
+        <div class="pills" id="layoutPills">
+          <button class="pill sel" data-v="center">Center</button>
+          <button class="pill" data-v="left">Left bar</button>
+          <button class="pill" data-v="bottom">Thumb bold</button>
+        </div>
+        <label>Logo (optional PNG)</label><input type="file" id="dLogo" accept="image/*" />
+        <button class="btn" id="dGo">Generate design</button>
+        <div class="status" id="dStatus"></div>
+      </div>
+      <div class="card preview" id="dPreview">
+        <div class="hint">Your generated design will appear here.<br>Tip: BrandForge palettes pair beautifully with these templates.</div>
+      </div>
+    </div>
+    <div class="cols" style="margin-top:18px">
+      <div class="card">
+        <h2>QR code</h2>
+        <label>Link or text</label><input type="text" id="qText" placeholder="https://…" />
+        <label>Palette</label>
+        <div class="swatches" id="qPal">
+          <div class="sw sel" data-v="gold" style="background:linear-gradient(135deg,#0A0E1A 40%,#D4AF37)"></div>
+          <div class="sw" data-v="ocean" style="background:linear-gradient(135deg,#04121F 40%,#38BDF8)"></div>
+          <div class="sw" data-v="mono" style="background:linear-gradient(135deg,#101010 40%,#F5F5F5)"></div>
+        </div>
+        <button class="btn ghost" id="qGo">Make QR</button>
+        <div id="qOut" style="margin-top:12px;text-align:center"></div>
+      </div>
+      <div class="card">
+        <h2>Icon &amp; favicon pack</h2>
+        <label>Source image (square works best)</label><input type="file" id="iFile" accept="image/*" />
+        <button class="btn ghost" id="iGo">Build pack</button>
+        <div class="status" id="iStatus"></div>
+        <div class="hint" style="margin-top:8px">ZIP with 8 PNG sizes, maskable PWA icon and multi-size favicon.ico.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VIDEO ================= -->
+  <div class="pane" id="pane-video">
+    <div class="cols">
+      <div class="card">
+        <h2>VideoForge</h2>
+        <label>Source video/audio (60 MB cap)</label>
+        <input type="file" id="vFile" accept="video/*,audio/*" />
+        <label>Output</label>
+        <div class="pills" id="vMode">
+          <button class="pill sel" data-v="mp4">MP4 video</button>
+          <button class="pill" data-v="gif">GIF</button>
+          <button class="pill" data-v="mp3">Extract audio (MP3)</button>
+        </div>
+        <div class="row">
+          <div><label>Trim start (s)</label><input type="number" id="vStart" min="0" step="0.1" placeholder="0" /></div>
+          <div><label>Trim end (s)</label><input type="number" id="vEnd" min="0" step="0.1" placeholder="full" /></div>
+        </div>
+        <label>Speed</label>
+        <div class="pills" id="vSpeed">
+          <button class="pill" data-v="0.5">0.5×</button>
+          <button class="pill sel" data-v="1">1×</button>
+          <button class="pill" data-v="1.5">1.5×</button>
+          <button class="pill" data-v="2">2×</button>
+        </div>
+        <label>Resize / crop-to-fit</label>
+        <div class="pills" id="vResize">
+          <button class="pill sel" data-v="">Keep</button>
+          <button class="pill" data-v="720p">720p</button>
+          <button class="pill" data-v="1080p">1080p</button>
+          <button class="pill" data-v="square">Square</button>
+          <button class="pill" data-v="story">Story 9:16</button>
+          <button class="pill" data-v="x-post">X post</button>
+        </div>
+        <label>Caption overlay (optional)</label>
+        <input type="text" id="vText" maxlength="120" placeholder="Smash AI Pro™" />
+        <button class="btn" id="vGo">Process</button>
+        <div class="status" id="vStatus"></div>
+      </div>
+      <div class="card preview" id="vPreview">
+        <div class="hint">Processed video, GIF or audio appears here with a download button.<br>
+        Jobs run on the studio server (ffmpeg) and expire after an hour.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 3D ================= -->
+  <div class="pane" id="pane-threed">
+    <div class="cols">
+      <div class="card">
+        <h2>3DForge <span style="font-size:11px;color:var(--muted)">(runs live in your browser)</span></h2>
+        <label>3D text</label><input type="text" id="tText" maxlength="24" value="SMASH" />
+        <label>Material</label>
+        <div class="pills" id="tMat">
+          <button class="pill sel" data-v="gold">Luxury Gold</button>
+          <button class="pill" data-v="chrome">Chrome</button>
+          <button class="pill" data-v="obsidian">Obsidian</button>
+          <button class="pill" data-v="neon">Neon</button>
+          <button class="pill" data-v="emerald">Emerald</button>
+        </div>
+        <label>Scene</label>
+        <div class="pills" id="tBg">
+          <button class="pill sel" data-v="#0A0E1A">Midnight</button>
+          <button class="pill" data-v="#1A1206">Bronze dark</button>
+          <button class="pill" data-v="#0D1B2A">Deep blue</button>
+          <button class="pill" data-v="#F5F5F4">Gallery white</button>
+        </div>
+        <div class="btnrow">
+          <button class="btn ghost" id="tSpin">Pause spin</button>
+          <button class="btn ghost" id="tPng">PNG snapshot</button>
+          <button class="btn ghost" id="tRec">Record 5s WebM</button>
+          <button class="btn ghost" id="tGlb">Export GLB model</button>
+        </div>
+        <div class="status" id="tStatus"></div>
+        <div class="hint" style="margin-top:10px">GLB opens in Blender, Windows 3D Viewer, Unity and the web. Recording captures the live turntable.</div>
+      </div>
+      <div class="card"><div id="glwrap"></div></div>
+    </div>
+  </div>
+
+  <footer>&copy; 2026 Ruwayne Campher &middot; Smash AI Pro&trade; &middot; Creative Studio v1.0</footer>
+</div>
+
+<script src="/static/vendor/three/three.min.js"></script>
+<script src="/static/vendor/three/FontLoader.js"></script>
+<script src="/static/vendor/three/TextGeometry.js"></script>
+<script src="/static/vendor/three/GLTFExporter.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  // tabs
+  $$('.tab').forEach(function (b) {
+    b.addEventListener('click', function () {
+      $$('.tab').forEach(function (x) { x.classList.remove('active'); });
+      $$('.pane').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      $('#pane-' + b.dataset.t).classList.add('active');
+      if (b.dataset.t === 'threed' && !window.__glInit) initGL();
+    });
+  });
+
+  function pillGroup(sel, multi) {
+    var cur = $(sel + ' .sel');
+    $$(sel + ' .pill, ' + sel + ' .sw').forEach(function (p) {
+      p.addEventListener('click', function () {
+        $$(sel + ' .pill, ' + sel + ' .sw').forEach(function (x) { x.classList.remove('sel'); });
+        p.classList.add('sel');
+      });
+    });
+    return function () { var s = $(sel + ' .sel'); return s ? s.dataset.v : ''; };
+  }
+  var getTpl = pillGroup('#tplPills'), getStyle = pillGroup('#stylePills'), getLayout = pillGroup('#layoutPills'),
+      getPal = pillGroup('#palSw'), getQPal = pillGroup('#qPal'),
+      getMode = pillGroup('#vMode'), getSpeed = pillGroup('#vSpeed'), getResize = pillGroup('#vResize'),
+      getMat = pillGroup('#tMat'), getBg = pillGroup('#tBg');
+
+  function setStatus(el, msg, cls) { el.className = 'status' + (cls ? ' ' + cls : ''); el.innerHTML = msg; }
+  function dl(url, name) { var a = document.createElement('a'); a.href = url; a.download = name || ''; document.body.appendChild(a); a.click(); a.remove(); }
+
+  // ---------- design ----------
+  $('#dGo').addEventListener('click', async function () {
+    var btn = this; btn.disabled = true;
+    setStatus($('#dStatus'), '<span class="spin">◌</span> Rendering on the studio server…');
+    try {
+      var body = { template: getTpl(), title: $('#dTitle').value, subtitle: $('#dSub').value,
+                   cta: $('#dCta').value, palette: getPal(), style: getStyle(), layout: getLayout() };
+      var lf = $('#dLogo').files[0];
+      if (lf && lf.size < 4 * 1024 * 1024) {
+        body.logo = await new Promise(function (res) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.readAsDataURL(lf); });
+      }
+      var r = await fetch('/api/design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'render failed');
+      $('#dPreview').innerHTML = '<img src="' + d.url + '" alt="design"/><button class="btn ghost" style="width:auto" id="dDl">Download PNG (' + d.width + '×' + d.height + ')</button>';
+      $('#dDl').addEventListener('click', function () { dl(d.url, 'smash-design.png'); });
+      setStatus($('#dStatus'), 'Done ✓', 'ok');
+    } catch (e) { setStatus($('#dStatus'), String(e.message || e), 'err'); }
+    btn.disabled = false;
+  });
+
+  $('#qGo').addEventListener('click', async function () {
+    try {
+      var r = await fetch('/api/design/qr', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: $('#qText').value, palette: getQPal() }) });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'qr failed');
+      $('#qOut').innerHTML = '<img src="' + d.url + '" style="width:190px;border-radius:10px;border:1px solid var(--line)"/><br><a class="back" href="' + d.url + '" download>Download</a>';
+    } catch (e) { $('#qOut').innerHTML = '<span style="color:#F87171">' + e + '</span>'; }
+  });
+
+  $('#iGo').addEventListener('click', async function () {
+    var f = $('#iFile').files[0];
+    if (!f) return setStatus($('#iStatus'), 'Choose an image first', 'err');
+    setStatus($('#iStatus'), '<span class="spin">◌</span> Building pack…');
+    var fd = new FormData(); fd.append('file', f);
+    try {
+      var r = await fetch('/api/design/icons', { method: 'POST', body: fd });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'pack failed');
+      setStatus($('#iStatus'), 'Done ✓ <a class="back" href="' + d.url + '" download>Download icon pack ZIP</a>', 'ok');
+    } catch (e) { setStatus($('#iStatus'), String(e.message || e), 'err'); }
+  });
+
+  // ---------- video ----------
+  $('#vGo').addEventListener('click', function () {
+    var f = $('#vFile').files[0];
+    if (!f) return setStatus($('#vStatus'), 'Choose a video/audio file first', 'err');
+    if (f.size > 60 * 1024 * 1024) return setStatus($('#vStatus'), 'File over 60 MB cap', 'err');
+    var ops = { mode: getMode(), start: parseFloat($('#vStart').value) || 0, end: parseFloat($('#vEnd').value) || 0,
+                speed: parseFloat(getSpeed()) || 1, resize: getResize(), text: $('#vText').value };
+    var fd = new FormData(); fd.append('file', f); fd.append('ops', JSON.stringify(ops));
+    var btn = $('#vGo'); btn.disabled = true;
+    setStatus($('#vStatus'), '<span class="spin">◌</span> Uploading & processing with ffmpeg…');
+    fetch('/api/video', { method: 'POST', body: fd }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.d.detail || 'upload failed');
+        poll(res.d.job);
+      }).catch(function (e) { setStatus($('#vStatus'), String(e.message || e), 'err'); btn.disabled = false; });
+
+    function poll(job) {
+      fetch('/api/video/' + job).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.status === 'done') {
+          btn.disabled = false;
+          setStatus($('#vStatus'), 'Done ✓ (' + Math.round(d.size / 1024) + ' KB)', 'ok');
+          var el = ops.mode === 'mp3' ? '<audio controls src="' + d.url + '"></audio>'
+               : ops.mode === 'gif' ? '<img src="' + d.url + '" alt="gif"/>'
+               : '<video controls src="' + d.url + '"></video>';
+          $('#vPreview').innerHTML = el + '<button class="btn ghost" style="width:auto" id="vDl">Download</button>';
+          $('#vDl').addEventListener('click', function () { dl(d.url); });
+        } else if (d.status === 'failed') {
+          btn.disabled = false; setStatus($('#vStatus'), 'Failed: ' + (d.error || '?'), 'err');
+        } else { setTimeout(function () { poll(job); }, 3000); }
+      }).catch(function () { setTimeout(function () { poll(job); }, 4000); });
+    }
+  });
+
+  // ---------- 3D ----------
+  var scene, camera, renderer, mesh, fontObj, spinning = true, rec = null;
+  var MATS = {
+    gold:     { color: 0xD4AF37, metalness: .92, roughness: .22 },
+    chrome:   { color: 0xDDDDDD, metalness: 1.0, roughness: .06 },
+    obsidian: { color: 0x14141C, metalness: .45, roughness: .28 },
+    neon:     { color: 0x0A0E1A, emissive: 0x39FF14, emissiveIntensity: .85, metalness: .2, roughness: .4 },
+    emerald:  { color: 0x10B981, metalness: .6, roughness: .2 }
+  };
+  function initGL() {
+    window.__glInit = true;
+    var wrap = $('#glwrap');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(getBg() || '#0A0E1A');
+    camera = new THREE.PerspectiveCamera(45, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+    camera.position.set(0, 0.5, 6);
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    wrap.appendChild(renderer.domElement);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 0.85));
+    var key = new THREE.DirectionalLight(0xffffff, 1.15); key.position.set(3, 5, 4); scene.add(key);
+    var rim = new THREE.PointLight(0xD4AF37, 0.9, 30); rim.position.set(-4, -2, -3); scene.add(rim);
+    var floorGeo = new THREE.CircleGeometry(7, 48);
+    var floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: 0x0D1322, metalness: .3, roughness: .8 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -1.35; scene.add(floor);
+    fetch('/static/vendor/three/helvetiker_bold.typeface.json').then(function (r) { return r.json(); }).then(function (j) {
+      fontObj = new THREE.Font(j); buildText();
+    }).catch(function () { setStatus($('#tStatus'), 'Font failed to load — 3D text unavailable', 'err'); });
+    (function loop() { requestAnimationFrame(loop); if (mesh && spinning) mesh.rotation.y += 0.012; renderer.render(scene, camera); })();
+    window.addEventListener('resize', function () {
+      if (!renderer) return;
+      camera.aspect = wrap.clientWidth / wrap.clientHeight; camera.updateProjectionMatrix();
+      renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    });
+    var deb;
+    $('#tText').addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(buildText, 450); });
+    $$('#tMat .pill').forEach(function (p) { p.addEventListener('click', function () { setTimeout(buildText, 10); }); });
+    $$('#tBg .pill').forEach(function (p) { p.addEventListener('click', function () { scene.background = new THREE.Color(p.dataset.v); }); });
+    $('#tSpin').addEventListener('click', function () { spinning = !spinning; this.textContent = spinning ? 'Pause spin' : 'Resume spin'; });
+    $('#tPng').addEventListener('click', function () {
+      renderer.render(scene, camera);
+      renderer.domElement.toBlob(function (b) { dl(URL.createObjectURL(b), 'smash-3d.png'); });
+    });
+    $('#tRec').addEventListener('click', function () {
+      if (rec) return;
+      var btn = this; btn.disabled = true;
+      setStatus($('#tStatus'), '<span class="spin">◌</span> Recording 5s turntable…');
+      var stream = renderer.domElement.captureStream(30);
+      rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      var chunks = [];
+      rec.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        var b = new Blob(chunks, { type: 'video/webm' });
+        dl(URL.createObjectURL(b), 'smash-3d-turntable.webm');
+        setStatus($('#tStatus'), 'Recording saved ✓', 'ok');
+        rec = null; btn.disabled = false;
+      };
+      rec.start();
+      setTimeout(function () { rec && rec.stop(); }, 5000);
+    });
+    $('#tGlb').addEventListener('click', function () {
+      if (!mesh) return;
+      new THREE.GLTFExporter().parse(mesh, function (buf) {
+        dl(URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' })), 'smash-3d.glb');
+        setStatus($('#tStatus'), 'GLB exported ✓', 'ok');
+      }, function (e) { setStatus($('#tStatus'), 'Export failed: ' + e, 'err'); }, { binary: true });
+    });
+  }
+  function buildText() {
+    if (!fontObj) return;
+    if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); }
+    var t = ($('#tText').value || 'SMASH').toUpperCase().slice(0, 24);
+    var geo = new THREE.TextGeometry(t, { font: fontObj, size: 1, height: 0.28, curveSegments: 5,
+      bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.022, bevelSegments: 3 });
+    geo.center();
+    var m = MATS[getMat()] || MATS.gold;
+    mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(m));
+    scene.add(mesh);
+    geo.computeBoundingBox();
+    var wid = geo.boundingBox.max.x - geo.boundingBox.min.x;
+    camera.position.z = Math.max(3.2, wid * 1.15 + 2.2);
+  }
+})();
+</script>
+</body>
+</html>

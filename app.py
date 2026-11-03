@@ -1706,6 +1706,9 @@ billing.init_db()
 _restore_config_from_turso()
 app.include_router(billing.router)
 
+import creative  # noqa: E402  Creative Studio: DesignForge + VideoForge engines
+app.include_router(creative.router)
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     """Baseline hardening headers on every response."""
@@ -1985,6 +1988,12 @@ def brandforge_page():
 @app.get("/downloads", response_class=HTMLResponse)
 def downloads_page():
     return FileResponse(BASE_DIR / "static" / "downloads.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/creative", response_class=HTMLResponse)
+def creative_page():
+    return FileResponse(BASE_DIR / "static" / "creative.html",
                         headers={"Cache-Control": "no-cache"})
 
 

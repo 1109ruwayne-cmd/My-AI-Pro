@@ -565,6 +565,9 @@ details.adv[open] summary{margin-bottom:14px}
       <button class="btn" id="brandBtn" type="button" title="BrandForge - brand identity generator & Brand Bible">
         <span aria-hidden="true">🎨</span> Brand Bible
       </button>
+      <button class="btn" id="creativeBtn" type="button" title="Creative Studio - graphic design, video editing and 3D">
+        <span aria-hidden="true">✨</span> Creative
+      </button>
       <button class="btn" id="dlBtn" type="button" title="Get the Smash AI Pro app - Android APK and Windows desktop">
         <span aria-hidden="true">📥</span> Get the app
       </button>
@@ -3176,6 +3179,7 @@ details.adv[open] summary{margin-bottom:14px}
   $('#regBtn').addEventListener('click', function () { location.href = '/registry'; });
   $('#brandBtn').addEventListener('click', function () { location.href = '/brandforge'; });
   if ($('#dlBtn')) $('#dlBtn').addEventListener('click', function () { location.href = '/downloads'; });
+  if ($('#creativeBtn')) $('#creativeBtn').addEventListener('click', function () { location.href = '/creative'; });
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sideBtn').addEventListener('click', function () {
     var on = document.querySelector('.app').classList.toggle('sideless');
