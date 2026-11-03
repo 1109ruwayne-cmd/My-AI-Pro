@@ -293,3 +293,6 @@ You - the owner, signed in with the admin password - are never metered or paywal
 The `knowledge` folder contains the **API Mega List** (github.com/cporter202/API-mega-list): 23 category files
 with about 11,700 unique APIs, mostly Apify tools. The links in the list contain the list author's Apify
 referral code (`?fpr=p2hrc6`). Remove any category with the ✕ next to it in the app.
+
+| [Launch film (54 s, narrated)](my-ai/static/media/smash-ai-pro-launch.mp4) | Full product tour for launch pages |
+| [Advert (19 s, vertical)](my-ai/static/media/smash-ai-pro-advert.mp4) | Social-media cut |
