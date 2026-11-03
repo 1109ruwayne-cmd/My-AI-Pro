@@ -296,3 +296,4 @@ referral code (`?fpr=p2hrc6`). Remove any category with the ✕ next to it in th
 
 | [Launch film (54 s, narrated)](my-ai/static/media/smash-ai-pro-launch.mp4) | Full product tour for launch pages |
 | [Advert (19 s, vertical)](my-ai/static/media/smash-ai-pro-advert.mp4) | Social-media cut |
+| [Marketing site (GitHub Pages)](https://1109ruwayne-cmd.github.io/smash-ai-pro/) | Free-hosted landing page |
