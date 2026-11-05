@@ -2015,6 +2015,91 @@ def library_page():
                         headers={"Cache-Control": "no-cache"})
 
 
+LIB_DATA = BASE_DIR / "static" / "library-data.json"
+LIB_FILMS = [
+    {"n": "Launch film 54 s", "u": "https://1109ruwayne-cmd.github.io/smash-ai-pro/assets/smash-ai-pro-launch.mp4"},
+    {"n": "Advert 19 s vertical", "u": "https://1109ruwayne-cmd.github.io/smash-ai-pro/assets/smash-ai-pro-advert.mp4"},
+    {"n": "Teaser 6 s", "u": "https://1109ruwayne-cmd.github.io/smash-ai-pro/assets/smash-ai-pro-teaser-6s.mp4"},
+]
+LIB_BRAND = [
+    {"n": "App icon 512", "u": "/static/icon-512.png"},
+    {"n": "App icon 192", "u": "/static/icon-192.png"},
+    {"n": "Maskable icon", "u": "/static/icon-maskable-512.png"},
+    {"n": "Feature graphic", "u": "/static/feature-graphic.png"},
+    {"n": "Web manifest", "u": "/static/manifest.webmanifest"},
+]
+
+
+def _is_admin_req(request: Request) -> bool:
+    try:
+        require_admin(request)
+        return True
+    except Exception:
+        return False
+
+
+def _lib_shelves(q: str) -> list:
+    try:
+        data = json.loads(LIB_DATA.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    ql = q.lower()
+    out = []
+    for e in data.get("entries", []):
+        if ql in (e.get("n", "") + " " + e.get("b", "") + " " + e.get("c", "")).lower():
+            out.append({"kind": "reference", "n": e.get("n", ""), "b": e.get("b", ""), "t": e.get("t", "")})
+    for t in data.get("tools", []):
+        if ql in (t.get("n", "") + " " + t.get("d", "")).lower():
+            out.append({"kind": "tool", "n": t.get("n", ""), "b": t.get("d", ""), "t": t.get("h", "")})
+    return out
+
+
+@app.get("/api/library")
+def api_library(q: str = "", request: Request = None):
+    """Umbrella cross-search: curated shelves + assets for everyone; the owner's
+    uploaded-file vault joins in only for a signed-in owner session."""
+    q = (q or "").strip()
+    hits = _lib_shelves(q) if q else []
+    if q:
+        for a in LIB_FILMS + LIB_BRAND:
+            if q in a["n"].lower():
+                hits.append({"kind": "asset", "n": a["n"], "u": a["u"]})
+    vault = []
+    if q and _is_admin_req(request):
+        try:
+            for _score, ch in kb.search(q)[:8]:
+                vault.append({"kind": "file", "n": ch.file,
+                              "b": " ".join((ch.text or "").split())[:220]})
+        except Exception:
+            vault = []
+    return {"q": q, "hits": hits[:40], "vault": vault}
+
+
+@app.get("/api/vault")
+def api_vault(request: Request):
+    """Owner-only inventory: uploaded knowledge files (downloadable), brand
+    assets and the public films - everything the studio holds for the owner."""
+    require_admin(request)
+    from urllib.parse import quote
+    files = []
+    for f in kb.list_files():
+        name = f.get("name") or f.get("n") or ""
+        if not name:
+            continue
+        files.append({"n": name, "size": f.get("size", 0), "kind": f.get("type", "file"),
+                      "u": "/api/files/" + quote(name)})
+    return {"files": files, "brand": LIB_BRAND, "films": LIB_FILMS}
+
+
+@app.get("/api/files/{name}")
+def download_file(name: str, request: Request):
+    require_admin(request)
+    path = (KNOWLEDGE_DIR / name).resolve()
+    if path.parent != KNOWLEDGE_DIR or not path.is_file():
+        raise HTTPException(404, "File not found")
+    return FileResponse(path, filename=name)
+
+
 @app.get("/press", response_class=HTMLResponse)
 def press_page():
     return FileResponse(BASE_DIR / "static" / "press.html",

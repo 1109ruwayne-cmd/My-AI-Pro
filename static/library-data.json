@@ -1,0 +1,307 @@
+{
+ "tools": [
+  {
+   "n": "Studio Chat",
+   "d": "Federated AI chat across 7 providers with fallback; searches your uploaded files.",
+   "h": "/"
+  },
+  {
+   "n": "The Library",
+   "d": "This umbrella: one search over tools, references, prompts and your vault.",
+   "h": "/library"
+  },
+  {
+   "n": "Industrial Desk",
+   "d": "Engineering topic library, motor/cylinder/loop calculators, IP\u00b7IE\u00b7PL\u00b7bus tables.",
+   "h": "/industrial"
+  },
+  {
+   "n": "PLC Studio",
+   "d": "Ladder builder with ST + PLCopen XML export, ST editor, IEC 61131-3 cheat sheets.",
+   "h": "/plc"
+  },
+  {
+   "n": "Creative Studio",
+   "d": "DesignForge graphics, VideoForge ffmpeg editing, 3DForge live 3D with GLB export.",
+   "h": "/creative"
+  },
+  {
+   "n": "BrandForge",
+   "d": "Full brand bible + SVG logo in ~90 s with compliance auditor.",
+   "h": "/brandforge"
+  },
+  {
+   "n": "Certification Registry",
+   "d": "SA cert verification desk with QR-stamped records.",
+   "h": "/"
+  },
+  {
+   "n": "Downloads",
+   "d": "Signed Android APK, Windows builds, source releases.",
+   "h": "/downloads"
+  },
+  {
+   "n": "Press Kit",
+   "d": "Copy blocks, logos, screenshots, films \u2014 COPY buttons for listings.",
+   "h": "/press"
+  }
+ ],
+ "entries": [
+  {
+   "c": "Electrical",
+   "n": "Ohm's law & power",
+   "b": "V=I\u00b7R \u00b7 P=V\u00b7I \u00b7 P=I\u00b2\u00b7R \u00b7 AC: P=\u221a3\u00b7V\u00b7I\u00b7cos\u03c6"
+  },
+  {
+   "c": "Electrical",
+   "n": "Three-phase kVA",
+   "b": "kVA = \u221a3\u00b7V\u00b7I\u00f71000; kW = kVA\u00b7cos\u03c6"
+  },
+  {
+   "c": "Electrical",
+   "n": "Motor full-load current",
+   "b": "I = P\u00d71000\u00f7(\u221a3\u00b7V\u00b7cos\u03c6\u00b7\u03b7); breaker \u22651.25\u00d7FLA",
+   "t": "/industrial"
+  },
+  {
+   "c": "Electrical",
+   "n": "Voltage drop limit",
+   "b": "Keep \u22645% of nominal; Vd=\u221a3\u00b7I\u00b7L\u00b7(r\u00b7cos\u03c6+x\u00b7sin\u03c6) per SANS 10142"
+  },
+  {
+   "c": "Electrical",
+   "n": "Cable rule of thumb",
+   "b": "SANS 10142 tables govern; free-air guide: 1.5mm\u00b2 Cu\u224816A, 2.5mm\u00b2\u224825A, 4mm\u00b2\u224832A"
+  },
+  {
+   "c": "Electrical",
+   "n": "Star-delta starting",
+   "b": "Start current \u2248\u2153 DOL, start torque \u2248\u2153 \u2014 use for high-inertia unloaded starts"
+  },
+  {
+   "c": "Electrical",
+   "n": "Power factor correction",
+   "b": "Qc = P\u00b7(tan\u03c6\u2081\u2212tan\u03c6\u2082); target 0.95\u20130.98, avoid leading at light load"
+  },
+  {
+   "c": "Electrical",
+   "n": "Earth-leakage selection",
+   "b": "30 mA personnel protection; 100\u2013300 mA equipment/fire; test monthly"
+  },
+  {
+   "c": "Electrical",
+   "n": "Transformer basics",
+   "b": "V\u2081/V\u2082=N\u2081/N\u2082 \u00b7 I\u2081\u00b7V\u2081\u2248I\u2082\u00b7V\u2082 \u00b7 kVA rating identical both sides"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Torque & power",
+   "b": "T = 9550\u00b7P(kW)\u00f7n(rpm) N\u00b7m \u00b7 P = T\u00b7\u03c9"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Bearing L10 life",
+   "b": "L10=(C/P)^p \u00d710\u2076 rev; p=3 ball, 10/3 roller; hours = L10\u00f7(60\u00b7n)"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Belt speed",
+   "b": "v = \u03c0\u00b7d\u00b7n\u00f760 m/s; keep V-belts 10\u201325 m/s"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Stress & strain",
+   "b": "\u03c3=F/A \u00b7 \u03b5=\u0394L/L \u00b7 E=\u03c3/\u03b5 (steel \u2248200 GPa)"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Bolt torque approx",
+   "b": "T = K\u00b7D\u00b7F with K\u22480.2 dry, 0.15 lubed; D nominal mm, F preload N"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Gear trains",
+   "b": "i=N\u2082/N\u2081; T\u2082=T\u2081\u00b7i\u00b7\u03b7; n\u2082=n\u2081\u00f7i"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Fit classes",
+   "b": "H7/g6 sliding \u00b7 H7/k6 location \u00b7 H7/p6 press; hole-basis default"
+  },
+  {
+   "c": "Mechanical",
+   "n": "Fillet weld throat",
+   "b": "throat = 0.707\u00d7leg; design stress on throat area"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "PLC scan cycle",
+   "b": "Read inputs \u2192 execute program \u2192 write outputs; watch scan time vs task"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "Fail-safe contact logic",
+   "b": "Wire e-stops NC in field so broken wire = stop; NC device \u2192 NO logic contact"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "Timer semantics",
+   "b": "TON delays ON, TOF delays OFF, TP pulses; retentive = TONR"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "4-20 mA scaling",
+   "b": "ENG = MIN + (RAW\u2212RAW\u2080)\u00b7SPAN\u00f7(RAWMAX\u2212RAW\u2080); live-zero detects wire break",
+   "t": "/plc"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "Modbus function codes",
+   "b": "FC1 read coils \u00b7 FC3 read holders \u00b7 FC6/16 write \u00b7 FC4 read inputs"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "PID in one line",
+   "b": "u = Kp\u00b7(e + 1/Ti\u00b7\u222be dt + Td\u00b7de/dt); tune P, then I, then D"
+  },
+  {
+   "c": "Automation & PLC",
+   "n": "Ladder \u2192 ST export",
+   "b": "Series rung: coil := c1 AND NOT c2; export ST + PLCopen XML here",
+   "t": "/plc"
+  },
+  {
+   "c": "Pneumatics & Hydraulics",
+   "n": "Cylinder force",
+   "b": "Push=p\u00b7A(bore), Pull=p\u00b7A(bore\u2212rod); 1 bar=100 kPa",
+   "t": "/industrial"
+  },
+  {
+   "c": "Pneumatics & Hydraulics",
+   "n": "Flow continuity",
+   "b": "Q=A\u00b7v; what enters a junction leaves it; size air lines \u22646\u20139 m/s"
+  },
+  {
+   "c": "Pneumatics & Hydraulics",
+   "n": "Hydraulic power",
+   "b": "P(kW) = q(L/min)\u00b7p(bar)\u00f7600\u00b7(1/\u03b7)"
+  },
+  {
+   "c": "Pneumatics & Hydraulics",
+   "n": "Accumulator pre-charge",
+   "b": "\u224890% of min working pressure (gas side), check cold"
+  },
+  {
+   "c": "Safety & Standards",
+   "n": "E-stop rules",
+   "b": "Direct mechanical switching, red/yellow, monitored reset, never PLC-only"
+  },
+  {
+   "c": "Safety & Standards",
+   "n": "LOCO/LOTO sequence",
+   "b": "Identify \u2192 isolate \u2192 lock & tag \u2192 verify zero energy \u2192 work \u2192 restore"
+  },
+  {
+   "c": "Safety & Standards",
+   "n": "ISO 13849 PL",
+   "b": "PL a\u2013e from severity, frequency, avoidability; cat 3/4 + DC for PL d/e",
+   "t": "/industrial"
+  },
+  {
+   "c": "Safety & Standards",
+   "n": "SA OHS Act",
+   "b": "Act 85 of 1993: employer duty of care; noise limit 85 dB(A) 8-h TWA"
+  },
+  {
+   "c": "Safety & Standards",
+   "n": "Fall protection",
+   "b": "SA GSR: risk-based; plan + harness + anchor \u22656 kN where fall risk exists"
+  },
+  {
+   "c": "Networks & IT",
+   "n": "Subnet cheat",
+   "b": "/24=254 hosts \u00b7 /25=126 \u00b7 /26=62 \u00b7 /27=30 \u00b7 /28=14"
+  },
+  {
+   "c": "Networks & IT",
+   "n": "Private ranges",
+   "b": "10.0.0.0/8 \u00b7 172.16.0.0/12 \u00b7 192.168.0.0/16"
+  },
+  {
+   "c": "Networks & IT",
+   "n": "OSI layers",
+   "b": "Physical\u2192Data\u2192Network\u2192Transport\u2192Session\u2192Presentation\u2192Application"
+  },
+  {
+   "c": "Networks & IT",
+   "n": "TCP vs UDP",
+   "b": "TCP reliable/ordered (HTTP, Modbus TCP); UDP fast/lossy (video, DNS queries)"
+  },
+  {
+   "c": "Networks & IT",
+   "n": "Common ports",
+   "b": "22 SSH \u00b7 53 DNS \u00b7 80/443 HTTP(S) \u00b7 502 Modbus \u00b7 3389 RDP (tunnel it!)"
+  },
+  {
+   "c": "Math & Conversions",
+   "n": "Areas & volumes",
+   "b": "Circle A=\u03c0r\u00b2 \u00b7 cylinder V=\u03c0r\u00b2h \u00b7 sphere V=4/3\u03c0r\u00b3 \u00b7 triangle A=\u00bdbh"
+  },
+  {
+   "c": "Math & Conversions",
+   "n": "Right-angle trig",
+   "b": "SOH-CAH-TOA; tan \u03b8 = opp/adj for ramp & taper work"
+  },
+  {
+   "c": "Math & Conversions",
+   "n": "Conversion pack",
+   "b": "1 bar=100 kPa=14.5 psi \u00b7 1 hp=0.746 kW \u00b7 1 in=25.4 mm \u00b7 \u00b0F=\u00b0C\u00d79/5+32"
+  },
+  {
+   "c": "Math & Conversions",
+   "n": "Margin vs markup",
+   "b": "margin=(P\u2212C)/P \u00b7 markup=(P\u2212C)/C; R100 cost at 40% margin \u2260 40% markup"
+  },
+  {
+   "c": "Business & SA",
+   "n": "VAT",
+   "b": "15%; compulsory registration at R1m taxable supplies/12 months"
+  },
+  {
+   "c": "Business & SA",
+   "n": "Company forms",
+   "b": "Pty Ltd (CIPC R125 online) \u00b7 sole prop free; Pty Ltd shields personal assets"
+  },
+  {
+   "c": "Business & SA",
+   "n": "Payroll statutorics",
+   "b": "UIF 1% employee + 1% employer; COID registration for employees; PAYE per SARS tables"
+  },
+  {
+   "c": "Business & SA",
+   "n": "Leave entitlements",
+   "b": "BCEA: 21 consecutive days annual (or 1 day per 17 worked); 5 days family responsibility/yr after 4 months service (\u22654 days/wk)"
+  },
+  {
+   "c": "AI & Prompts",
+   "n": "Prompt pattern",
+   "b": "Role + context + task + output format + constraints; iterate once, then lock"
+  },
+  {
+   "c": "AI & Prompts",
+   "n": "Federation in this studio",
+   "b": "Chat routes across 7 providers with automatic fallback \u2014 one question, best available brain"
+  },
+  {
+   "c": "AI & Prompts",
+   "n": "Your file vault",
+   "b": "Upload docs in Studio; chat searches them itself (search_files tool)"
+  },
+  {
+   "c": "AI & Prompts",
+   "n": "Industrial prompt starters",
+   "b": "24 ready prompts across 8 engineering domains",
+   "t": "/industrial"
+  }
+ ]
+}

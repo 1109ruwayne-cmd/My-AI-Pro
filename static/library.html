@@ -44,90 +44,82 @@ h2{color:var(--gold);font-size:15px;letter-spacing:.08em;margin:30px 0 12px;text
   <select id="cat" onchange="draw()"><option value="">All shelves</option></select>
 </div>
 <div id="count"></div>
+<div id="hist"></div>
 <h2>Tools in the building</h2>
 <div class="grid tools" id="tools"></div>
 <h2>Reference shelves</h2>
 <div class="grid" id="shelf"></div>
+<div id="server"></div>
+<div id="vault"></div>
 </main>
 <script>
-var TOOLS = [
- {n:"Studio Chat", d:"Federated AI chat across 7 providers with fallback; searches your uploaded files.", h:"/"},
- {n:"The Library", d:"This umbrella: one search over tools, references, prompts and your vault.", h:"/library"},
- {n:"Industrial Desk", d:"Engineering topic library, motor/cylinder/loop calculators, IP·IE·PL·bus tables.", h:"/industrial"},
- {n:"PLC Studio", d:"Ladder builder with ST + PLCopen XML export, ST editor, IEC 61131-3 cheat sheets.", h:"/plc"},
- {n:"Creative Studio", d:"DesignForge graphics, VideoForge ffmpeg editing, 3DForge live 3D with GLB export.", h:"/creative"},
- {n:"BrandForge", d:"Full brand bible + SVG logo in ~90 s with compliance auditor.", h:"/brandforge"},
- {n:"Certification Registry", d:"SA cert verification desk with QR-stamped records.", h:"/"},
- {n:"Downloads", d:"Signed Android APK, Windows builds, source releases.", h:"/downloads"},
- {n:"Press Kit", d:"Copy blocks, logos, screenshots, films — COPY buttons for listings.", h:"/press"}
-];
-var E = [
- // Electrical
- {c:"Electrical", n:"Ohm's law & power", b:"V=I·R · P=V·I · P=I²·R · AC: P=√3·V·I·cosφ"},
- {c:"Electrical", n:"Three-phase kVA", b:"kVA = √3·V·I÷1000; kW = kVA·cosφ"},
- {c:"Electrical", n:"Motor full-load current", b:"I = P×1000÷(√3·V·cosφ·η); breaker ≥1.25×FLA", t:"/industrial"},
- {c:"Electrical", n:"Voltage drop limit", b:"Keep ≤5% of nominal; Vd=√3·I·L·(r·cosφ+x·sinφ) per SANS 10142"},
- {c:"Electrical", n:"Cable rule of thumb", b:"SANS 10142 tables govern; free-air guide: 1.5mm² Cu≈16A, 2.5mm²≈25A, 4mm²≈32A"},
- {c:"Electrical", n:"Star-delta starting", b:"Start current ≈⅓ DOL, start torque ≈⅓ — use for high-inertia unloaded starts"},
- {c:"Electrical", n:"Power factor correction", b:"Qc = P·(tanφ₁−tanφ₂); target 0.95–0.98, avoid leading at light load"},
- {c:"Electrical", n:"Earth-leakage selection", b:"30 mA personnel protection; 100–300 mA equipment/fire; test monthly"},
- {c:"Electrical", n:"Transformer basics", b:"V₁/V₂=N₁/N₂ · I₁·V₁≈I₂·V₂ · kVA rating identical both sides"},
- // Mechanical
- {c:"Mechanical", n:"Torque & power", b:"T = 9550·P(kW)÷n(rpm) N·m · P = T·ω"},
- {c:"Mechanical", n:"Bearing L10 life", b:"L10=(C/P)^p ×10⁶ rev; p=3 ball, 10/3 roller; hours = L10÷(60·n)"},
- {c:"Mechanical", n:"Belt speed", b:"v = π·d·n÷60 m/s; keep V-belts 10–25 m/s"},
- {c:"Mechanical", n:"Stress & strain", b:"σ=F/A · ε=ΔL/L · E=σ/ε (steel ≈200 GPa)"},
- {c:"Mechanical", n:"Bolt torque approx", b:"T = K·D·F with K≈0.2 dry, 0.15 lubed; D nominal mm, F preload N"},
- {c:"Mechanical", n:"Gear trains", b:"i=N₂/N₁; T₂=T₁·i·η; n₂=n₁÷i"},
- {c:"Mechanical", n:"Fit classes", b:"H7/g6 sliding · H7/k6 location · H7/p6 press; hole-basis default"},
- {c:"Mechanical", n:"Fillet weld throat", b:"throat = 0.707×leg; design stress on throat area"},
- // Automation
- {c:"Automation & PLC", n:"PLC scan cycle", b:"Read inputs → execute program → write outputs; watch scan time vs task"},
- {c:"Automation & PLC", n:"Fail-safe contact logic", b:"Wire e-stops NC in field so broken wire = stop; NC device → NO logic contact"},
- {c:"Automation & PLC", n:"Timer semantics", b:"TON delays ON, TOF delays OFF, TP pulses; retentive = TONR"},
- {c:"Automation & PLC", n:"4-20 mA scaling", b:"ENG = MIN + (RAW−RAW₀)·SPAN÷(RAWMAX−RAW₀); live-zero detects wire break", t:"/plc"},
- {c:"Automation & PLC", n:"Modbus function codes", b:"FC1 read coils · FC3 read holders · FC6/16 write · FC4 read inputs"},
- {c:"Automation & PLC", n:"PID in one line", b:"u = Kp·(e + 1/Ti·∫e dt + Td·de/dt); tune P, then I, then D"},
- {c:"Automation & PLC", n:"Ladder → ST export", b:"Series rung: coil := c1 AND NOT c2; export ST + PLCopen XML here", t:"/plc"},
- // Fluid power
- {c:"Pneumatics & Hydraulics", n:"Cylinder force", b:"Push=p·A(bore), Pull=p·A(bore−rod); 1 bar=100 kPa", t:"/industrial"},
- {c:"Pneumatics & Hydraulics", n:"Flow continuity", b:"Q=A·v; what enters a junction leaves it; size air lines ≤6–9 m/s"},
- {c:"Pneumatics & Hydraulics", n:"Hydraulic power", b:"P(kW) = q(L/min)·p(bar)÷600·(1/η)"},
- {c:"Pneumatics & Hydraulics", n:"Accumulator pre-charge", b:"≈90% of min working pressure (gas side), check cold"},
- // Safety
- {c:"Safety & Standards", n:"E-stop rules", b:"Direct mechanical switching, red/yellow, monitored reset, never PLC-only"},
- {c:"Safety & Standards", n:"LOCO/LOTO sequence", b:"Identify → isolate → lock & tag → verify zero energy → work → restore"},
- {c:"Safety & Standards", n:"ISO 13849 PL", b:"PL a–e from severity, frequency, avoidability; cat 3/4 + DC for PL d/e", t:"/industrial"},
- {c:"Safety & Standards", n:"SA OHS Act", b:"Act 85 of 1993: employer duty of care; noise limit 85 dB(A) 8-h TWA"},
- {c:"Safety & Standards", n:"Fall protection", b:"SA GSR: risk-based; plan + harness + anchor ≥6 kN where fall risk exists"},
- // Networks
- {c:"Networks & IT", n:"Subnet cheat", b:"/24=254 hosts · /25=126 · /26=62 · /27=30 · /28=14"},
- {c:"Networks & IT", n:"Private ranges", b:"10.0.0.0/8 · 172.16.0.0/12 · 192.168.0.0/16"},
- {c:"Networks & IT", n:"OSI layers", b:"Physical→Data→Network→Transport→Session→Presentation→Application"},
- {c:"Networks & IT", n:"TCP vs UDP", b:"TCP reliable/ordered (HTTP, Modbus TCP); UDP fast/lossy (video, DNS queries)"},
- {c:"Networks & IT", n:"Common ports", b:"22 SSH · 53 DNS · 80/443 HTTP(S) · 502 Modbus · 3389 RDP (tunnel it!)"},
- // Math
- {c:"Math & Conversions", n:"Areas & volumes", b:"Circle A=πr² · cylinder V=πr²h · sphere V=4/3πr³ · triangle A=½bh"},
- {c:"Math & Conversions", n:"Right-angle trig", b:"SOH-CAH-TOA; tan θ = opp/adj for ramp & taper work"},
- {c:"Math & Conversions", n:"Conversion pack", b:"1 bar=100 kPa=14.5 psi · 1 hp=0.746 kW · 1 in=25.4 mm · °F=°C×9/5+32"},
- {c:"Math & Conversions", n:"Margin vs markup", b:"margin=(P−C)/P · markup=(P−C)/C; R100 cost at 40% margin ≠ 40% markup"},
- // Business SA
- {c:"Business & SA", n:"VAT", b:"15%; compulsory registration at R1m taxable supplies/12 months"},
- {c:"Business & SA", n:"Company forms", b:"Pty Ltd (CIPC R125 online) · sole prop free; Pty Ltd shields personal assets"},
- {c:"Business & SA", n:"Payroll statutorics", b:"UIF 1% employee + 1% employer; COID registration for employees; PAYE per SARS tables"},
- {c:"Business & SA", n:"Leave entitlements", b:"BCEA: 21 consecutive days annual (or 1 day per 17 worked); 5 days family responsibility/yr after 4 months service (≥4 days/wk)"},
- // AI
- {c:"AI & Prompts", n:"Prompt pattern", b:"Role + context + task + output format + constraints; iterate once, then lock"},
- {c:"AI & Prompts", n:"Federation in this studio", b:"Chat routes across 7 providers with automatic fallback — one question, best available brain"},
- {c:"AI & Prompts", n:"Your file vault", b:"Upload docs in Studio; chat searches them itself (search_files tool)"},
- {c:"AI & Prompts", n:"Industrial prompt starters", b:"24 ready prompts across 8 engineering domains", t:"/industrial"}
-];
-var cats = Array.from(new Set(E.map(function (x) { return x.c; })));
-var sel = document.getElementById("cat");
-cats.forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+var TOOLS = [], E = [];
+var signed = false, deb = null;
+function esc(s){ return String(s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function adminHeaders(){ var p = ""; try { p = sessionStorage.getItem("myai.admin") || ""; } catch (e) {} var h = {}; if (p) h["X-Admin-Password"] = p; return h; }
+fetch("/static/library-data.json").then(function (r) { return r.json(); }).then(function (d) {
+  TOOLS = d.tools || []; E = d.entries || []; initCats(); draw();
+}).catch(function () { document.getElementById("count").textContent = "shelf data failed to load"; });
+fetch("/api/vault", { headers: adminHeaders() }).then(function (r) { if (r.ok) { signed = true; return r.json(); } throw 0; })
+  .then(renderVault)
+  .catch(function () {
+    document.getElementById("vault").innerHTML = '<p class="note">🔐 The Vault is owner-only. Open the Studio and sign in (Settings) to list everything the studio holds for you and to include your uploaded files in library search.</p>';
+  });
+function initCats(){
+  var cats = Array.from(new Set(E.map(function (x) { return x.c; })));
+  var sel = document.getElementById("cat");
+  sel.innerHTML = '<option value="">All shelves</option>';
+  cats.forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+}
+function hist(){ try { return JSON.parse(localStorage.getItem("libhist") || "[]"); } catch (e) { return []; } }
+function pushHist(q){
+  if (!q) return;
+  var h = hist().filter(function (x) { return x !== q; }); h.unshift(q); h = h.slice(0, 6);
+  localStorage.setItem("libhist", JSON.stringify(h)); drawHist();
+}
+function drawHist(){
+  document.getElementById("hist").innerHTML = hist().map(function (q) {
+    return '<button class="ask" style="display:inline-block;width:auto;margin:2px" onclick="useHist(this.textContent)">' + esc(q) + '</button>';
+  }).join("");
+}
+function useHist(q){ document.getElementById("q").value = q; onQ(); }
+function onQ(){ draw(); clearTimeout(deb); deb = setTimeout(serverSearch, 350); }
+function serverSearch(){
+  var q = document.getElementById("q").value.trim();
+  var box = document.getElementById("server");
+  if (q.length < 2) { box.innerHTML = ""; return; }
+  fetch("/api/library?q=" + encodeURIComponent(q), { headers: adminHeaders() }).then(function (r) { return r.json(); }).then(function (d) {
+    var s = "", h = d.hits || [];
+    if (h.length) {
+      s += '<h2>More from under the roof</h2><div class="grid">' + h.map(function (x) {
+        return '<div class="card"><span class="cat">' + esc(x.kind) + '</span><h3>' + esc(x.n) + '</h3><p>' + esc(x.b || "") + '</p><div class="row">' +
+          (x.t ? '<a href="' + x.t + '">Open →</a>' : "") + (x.u ? '<a href="' + x.u + '" target="_blank">Go →</a>' : "") + '</div></div>';
+      }).join("") + '</div>';
+    }
+    var v = d.vault || [];
+    if (v.length) {
+      s += '<h2>Inside your files</h2><div class="grid">' + v.map(function (x) {
+        return '<div class="card"><span class="cat">vault file</span><h3>' + esc(x.n) + '</h3><p>' + esc(x.b) + '</p></div>';
+      }).join("") + '</div>';
+    } else if (!signed) {
+      s += '<p class="note">Tip: sign in to the Studio and this search also reaches your uploaded files.</p>';
+    }
+    box.innerHTML = s;
+  }).catch(function () { box.innerHTML = ""; });
+}
+function renderVault(d){
+  var f = d.files || [], s = '<h2>Your vault — everything the studio holds for you</h2><div class="grid">';
+  s += f.map(function (x) {
+    return '<div class="card"><span class="cat">' + esc(x.kind || "file") + '</span><h3>' + esc(x.n) + '</h3><p>' + Math.round((x.size || 0) / 1024) + ' KB</p><div class="row"><a href="' + x.u + '" target="_blank">Download</a></div></div>';
+  }).join("");
+  s += (d.brand || []).concat(d.films || []).map(function (x) {
+    return '<div class="card"><span class="cat">asset</span><h3>' + esc(x.n) + '</h3><div class="row"><a href="' + x.u + '" target="_blank">Open →</a></div></div>';
+  }).join("") + '</div>';
+  document.getElementById("vault").innerHTML = s;
+}
 function askAI(e){ location.href = "/?ask=" + encodeURIComponent("Using this reference — " + e.n + ": " + e.b + " — explain it and give a worked example relevant to my work."); }
 function draw(){
-  var q = document.getElementById("q").value.toLowerCase(), c = sel.value;
+  var q = document.getElementById("q").value.toLowerCase(), c = document.getElementById("cat").value;
   document.getElementById("tools").innerHTML = TOOLS.filter(function (t) {
     return !q || (t.n + " " + t.d).toLowerCase().indexOf(q) >= 0;
   }).map(function (t) {
@@ -137,13 +129,17 @@ function draw(){
     return (!c || e.c === c) && (!q || (e.n + " " + e.b + " " + e.c).toLowerCase().indexOf(q) >= 0);
   });
   document.getElementById("count").textContent = list.length + " reference entries on the shelves" + (q ? ' matching "' + q + '"' : "") + (c ? " · shelf: " + c : "");
-  document.getElementById("shelf").innerHTML = list.map(function (e, i) {
+  document.getElementById("shelf").innerHTML = list.map(function (e) {
     return '<div class="card"><span class="cat">' + e.c + '</span><h3>' + e.n + '</h3><p>' + e.b + '</p><div class="row">' +
       (e.t ? '<a href="' + e.t + '">Open tool →</a>' : "") +
       '<button onclick=\'askAI(' + JSON.stringify(e).replace(/'/g, "&#39;") + ')\'>Ask AI</button></div></div>';
   }).join("");
 }
-draw();
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Enter" && document.activeElement === document.getElementById("q")) pushHist(document.getElementById("q").value.trim());
+});
+drawHist();
+
 </script>
 </body>
 </html>
