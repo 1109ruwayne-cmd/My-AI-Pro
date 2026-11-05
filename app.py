@@ -1997,6 +1997,18 @@ def creative_page():
                         headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/industrial", response_class=HTMLResponse)
+def industrial_page():
+    return FileResponse(BASE_DIR / "static" / "industrial.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/plc", response_class=HTMLResponse)
+def plc_page():
+    return FileResponse(BASE_DIR / "static" / "plc.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/press", response_class=HTMLResponse)
 def press_page():
     return FileResponse(BASE_DIR / "static" / "press.html",

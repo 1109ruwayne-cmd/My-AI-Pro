@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Industrial Desk — Smash AI Pro</title>
+<style>
+:root{--bg:#0B101D;--card:#111827;--br:#1F2937;--gold:#D4AF37;--txt:#E8E6DF;--mut:#9CA3AF}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,Segoe UI,Roboto,sans-serif}
+header{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--br);position:sticky;top:0;background:var(--bg)}
+header a,header .chip{color:var(--mut);text-decoration:none;border:1px solid var(--br);border-radius:999px;padding:6px 12px;font-size:13px}
+header a:hover,header .chip:hover{color:var(--gold);border-color:var(--gold)}
+h1{font-size:20px;margin:0;color:var(--gold);letter-spacing:.06em}
+main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
+h2{color:var(--gold);font-size:16px;letter-spacing:.08em;margin:34px 0 12px;text-transform:uppercase}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:16px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--txt)}
+.card ul{margin:8px 0;padding-left:18px;color:var(--mut);font-size:13.5px}
+.card details summary{cursor:pointer;color:var(--gold);font-size:13px;margin-top:6px}
+.ask{display:block;width:100%;text-align:left;margin:6px 0 0;background:#0B101D;border:1px solid var(--br);color:var(--txt);border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer}
+.ask:hover{border-color:var(--gold);color:var(--gold)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+th,td{border:1px solid var(--br);padding:7px 9px;text-align:left;color:var(--mut)}
+th{color:var(--gold)}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+input{width:100%;background:#0B101D;border:1px solid var(--br);border-radius:9px;padding:8px 10px;color:var(--txt);font-size:14px}
+.out{margin-top:10px;padding:10px 12px;border:1px dashed var(--gold);border-radius:10px;font-size:14px;color:var(--txt);min-height:20px}
+button.calc{margin-top:10px;background:var(--gold);border:none;color:#0B101D;font-weight:700;border-radius:10px;padding:9px 16px;cursor:pointer}
+.note{color:var(--mut);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <a href="/">← Studio</a>
+  <h1>🏭 INDUSTRIAL DESK</h1>
+  <a class="chip" href="/plc">PLC Studio</a>
+  <a class="chip" href="/creative">Creative</a>
+  <a class="chip" href="/press">Press</a>
+</header>
+<main>
+<p class="note">Engineering knowledge desk for plant &amp; factory work. Every “Ask in Studio” button opens the federated chat with the prompt pre-loaded — the AI answers with full industrial context and can search your uploaded files.</p>
+
+<h2>Topic library</h2>
+<div class="grid" id="lib"></div>
+
+<h2>Engineer's calculators</h2>
+<div class="grid">
+  <div class="card"><h3>3-phase motor full-load current</h3>
+    <label>Power (kW)</label><input id="m_kw" type="number" value="30" step="0.1">
+    <label>Voltage (V line)</label><input id="m_v" type="number" value="400">
+    <label>cos φ</label><input id="m_pf" type="number" value="0.85" step="0.01">
+    <label>Efficiency η</label><input id="m_eff" type="number" value="0.93" step="0.01">
+    <button class="calc" onclick="calcMotor()">Calculate</button>
+    <div class="out" id="m_out">—</div>
+    <p class="note">I = P÷(√3·V·cosφ·η). Breaker suggestion = 1.25× FLA (round up to next standard size).</p>
+  </div>
+  <div class="card"><h3>Pneumatic cylinder force</h3>
+    <label>Bore Ø (mm)</label><input id="c_b" type="number" value="63">
+    <label>Rod Ø (mm)</label><input id="c_r" type="number" value="20">
+    <label>Pressure (bar)</label><input id="c_p" type="number" value="6" step="0.1">
+    <button class="calc" onclick="calcCyl()">Calculate</button>
+    <div class="out" id="c_out">—</div>
+    <p class="note">Push = p·A(bore); pull = p·A(bore−rod). 1 bar = 100 kPa.</p>
+  </div>
+  <div class="card"><h3>4–20 mA loop headroom</h3>
+    <label>Loop supply (V DC)</label><input id="l_v" type="number" value="24">
+    <label>Total loop resistance (Ω)</label><input id="l_r" type="number" value="500">
+    <label>Transmitter min. operating V</label><input id="l_t" type="number" value="12">
+    <button class="calc" onclick="calcLoop()">Calculate</button>
+    <div class="out" id="l_out">—</div>
+    <p class="note">Worst case at 20 mA: drop = 0.02·R. Healthy loop keeps ≥ transmitter minimum across the receiver.</p>
+  </div>
+</div>
+
+<h2>Quick reference</h2>
+<div class="grid">
+  <div class="card"><h3>IP ingress protection (common)</h3>
+    <table><tr><th>Code</th><th>Solids</th><th>Liquids</th><th>Typical use</th></tr>
+    <tr><td>IP54</td><td>Dust protected</td><td>Splashing</td><td>Indoor panels</td></tr>
+    <tr><td>IP55</td><td>Dust protected</td><td>Low-pressure jets</td><td>Machine enclosures</td></tr>
+    <tr><td>IP65</td><td>Dust tight</td><td>Jets</td><td>Washdown areas</td></tr>
+    <tr><td>IP66</td><td>Dust tight</td><td>Heavy jets</td><td>Outdoor cabinets</td></tr>
+    <tr><td>IP67</td><td>Dust tight</td><td>Immersion 1 m/30 min</td><td>Field sensors</td></tr></table>
+  </div>
+  <div class="card"><h3>Motor efficiency classes</h3>
+    <table><tr><th>Class</th><th>Name</th><th>Note</th></tr>
+    <tr><td>IE1</td><td>Standard</td><td>Legacy stock</td></tr>
+    <tr><td>IE2</td><td>High</td><td>Old minimum regs</td></tr>
+    <tr><td>IE3</td><td>Premium</td><td>Current SA/EU minimum ≥0.75 kW</td></tr>
+    <tr><td>IE4</td><td>Super premium</td><td>EU minimum from 2023 (≥75 kW IE3→IE4 steps)</td></tr>
+    <tr><td>IE5</td><td>Ultra premium</td><td>PM/synchronous, widest losses cut</td></tr></table>
+  </div>
+  <div class="card"><h3>ISO 13849-1 performance levels</h3>
+    <table><tr><th>PL</th><th>Avg. dangerous failure</th><th>Typical application</th></tr>
+    <tr><td>a</td><td>≥10⁻⁵/yr</td><td>Low-risk stops</td></tr>
+    <tr><td>c</td><td>≥10⁻⁶/yr</td><td>Guards, light curtains</td></tr>
+    <tr><td>d</td><td>≥10⁻⁷/yr</td><td>Presses, robots</td></tr>
+    <tr><td>e</td><td>≥10⁻⁸/yr</td><td>Highest severity + exposure</td></tr></table>
+    <p class="note">Category (B,1,2,3,4) + DCavg + MTTFd drive the achieved PL.</p>
+  </div>
+  <div class="card"><h3>Field signals &amp; buses in one line each</h3>
+    <table><tr><th>Standard</th><th>One-liner</th></tr>
+    <tr><td>4–20 mA</td><td>Analogue workhorse; live-zero detects wire break</td></tr>
+    <tr><td>0–10 V</td><td>Cheap analogue; noise-sensitive over distance</td></tr>
+    <tr><td>HART</td><td>Digital channel on top of 4–20 mA</td></tr>
+    <tr><td>PROFIBUS DP</td><td>Serial fieldbus, purple 2-wire, up to 12 Mbit/s</td></tr>
+    <tr><td>PROFINET</td><td>Industrial Ethernet, RT/IRT classes, DCP naming</td></tr>
+    <tr><td>EtherNet/IP</td><td>CIP over Ethernet, AB ecosystem default</td></tr>
+    <tr><td>Modbus TCP/RTU</td><td>Simple master-slave, register maps, everywhere</td></tr>
+    <tr><td>IO-Link</td><td>Smart sensor point-to-point, 3-wire M12</td></tr></table>
+  </div>
+</div>
+</main>
+<script>
+var TOPICS = [
+ {t:"Maintenance & Reliability", b:["Preventive & predictive strategies, CMMS work orders","MTBF / MTTR / OEE mathematics","Lubrication, alignment, vibration analysis basics"], p:["Build a 6-month preventive maintenance plan for a 30 kW conveyor drivetrain with spares list","Root-cause analysis: bearing runs hot after re-greasing — top 5 causes with verification tests","Draft an OEE calculation sheet (availability x performance x quality) for a packaging line"]},
+ {t:"Electrical Machines & Drives", b:["3-phase motors, starters (DOL/star-delta/soft/VFD)","VFD parameters: ramps, V/f, torque limits, braking","Protection: overload classes, thermistors, earth leakage"], p:["Size a star-delta starter set for a 45 kW pump motor at 400 V with cable and breaker selection","Explain VFD scalar vs vector control and when each wins on a centrifugal fan","List the correct overload class and setting range for a crusher duty (high inertia) start"]},
+ {t:"Pneumatics & Hydraulics", b:["Circuits: directional, flow and pressure control","Cylinder sizing, FRL preparation, accumulators","Seal types and contamination control"], p:["Design a double-acting cylinder circuit with mid-stroke hold and end-of-stroke cushioning","Calculate accumulator pre-charge and volume for a 5 L/min emergency pump-down","Choose seal material for a hydraulic press at 90 °C with HFD-U fluid"]},
+ {t:"Instrumentation & Process Control", b:["4-20 mA loops, 2/3/4-wire transmitters, HART","PID tuning: Ziegler-Nichols, lambda, trial method","Level/flow/pressure/temperature measurement trade-offs"], p:["Tune a temperature PID loop oscillating at 20 s period on a steam jacket","Compare differential-pressure vs radar level measurement for a 4 m syrup tank","Wire and scale a 4-20 mA pressure transmitter to a PLC analogue card with raw-to-engineering formula"]},
+ {t:"SCADA, HMI & IIoT", b:["Tag databases, alarms (EEMUA 191 philosophy), trends","OPC UA vs MQTT sparkplug for IIoT","Cybersecurity segmentation: Purdue model basics"], p:["Draft an alarm rationalisation table for a boiler plant using EEMUA 191 priority classes","Design an OPC UA tag namespace for a 3-line bottling plant","Write a Purdue-model segmentation note for connecting a legacy PLC line to cloud dashboards"]},
+ {t:"Functional Safety & Standards", b:["ISO 13849 PL / IEC 62061 SIL determination","E-stops, safety relays, light curtains, guards","SANS/IEC machine safety compliance path"], p:["Determine required performance level for an automatic palletiser guard door (severity, frequency, avoidability)","Specify a safety relay circuit for dual-channel e-stop with monitored reset","List the SANS/IEC standards checklist for certifying a modified conveyor line"]},
+ {t:"Manufacturing & Machining", b:["Processes: turning, milling, welding, forming","Tolerances, GD&T basics, fits (H7/g6 etc.)","Cycle-time and bottleneck analysis"], p:["Compute cycle time and bottleneck for a 4-station cell with 42/55/38/60 s operations","Explain H7/g6 vs H7/p6 fits with real shaft-and-hole examples","Draft a weld procedure specification outline for S355 structural steel"]},
+ {t:"Energy & Utilities", b:["Tariff structure, power factor correction, demand management","Compressed-air audits (leak cost mathematics)","Boiler and chiller efficiency fundamentals"], p:["Calculate annual cost of a 3 mm compressed-air leak at 7 bar with 24/7 operation at R2.85/kWh","Size a power-factor correction capacitor bank for a 320 kVA load at 0.82 pf targeting 0.96","Build a boiler efficiency estimate from flue-gas temperature and O2 readings"]}
+];
+function ask(t){ location.href = "/?ask=" + encodeURIComponent(t); }
+var lib = document.getElementById("lib");
+TOPICS.forEach(function (tp) {
+  var d = document.createElement("div"); d.className = "card";
+  var ul = tp.b.map(function (x) { return "<li>" + x + "</li>"; }).join("");
+  var ps = tp.p.map(function (x) { return '<button class="ask" onclick="ask(this.textContent.replace(/^Ask: /,\"\"))">Ask: ' + x + "</button>"; }).join("");
+  d.innerHTML = "<h3>" + tp.t + "</h3><details><summary>core scope & prompt starters</summary><ul>" + ul + "</ul>" + ps + "</details>";
+  lib.appendChild(d);
+});
+function calcMotor(){
+  var P=+document.getElementById("m_kw").value, V=+document.getElementById("m_v").value,
+      pf=+document.getElementById("m_pf").value, ef=+document.getElementById("m_eff").value;
+  var I=P*1000/(Math.sqrt(3)*V*pf*ef);
+  document.getElementById("m_out").innerHTML="Full-load current ≈ <b>"+I.toFixed(1)+" A</b> · breaker ≥ "+(I*1.25).toFixed(1)+" A → next standard size · cable per SANS 10142 derating tables";
+}
+function calcCyl(){
+  var b=+document.getElementById("c_b").value, r=+document.getElementById("c_r").value, p=+document.getElementById("c_p").value;
+  var Ab=Math.PI*b*b/4, Ar=Math.PI*(b*b-r*r)/4, F1=p*1e5*Ab/1e6, F2=p*1e5*Ar/1e6;
+  document.getElementById("c_out").innerHTML="Push ≈ <b>"+F1.toFixed(0)+" N</b> ("+(F1/9.81).toFixed(0)+" kg) · Pull ≈ <b>"+F2.toFixed(0)+" N</b> ("+(F2/9.81).toFixed(0)+" kg) at "+p+" bar";
+}
+function calcLoop(){
+  var V=+document.getElementById("l_v").value, R=+document.getElementById("l_r").value, T=+document.getElementById("l_t").value;
+  var drop=0.02*R, left=V-drop;
+  document.getElementById("l_out").innerHTML="Drop at 20 mA = <b>"+drop.toFixed(1)+" V</b> · left for transmitter = "+left.toFixed(1)+" V → "+(left>=T?"<b>OK</b>":"<b>LOW — reduce R or raise supply</b>");
+}
+</script>
+</body>
+</html>

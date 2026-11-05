@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Studio — Smash AI Pro</title>
+<style>
+:root{--bg:#0B101D;--card:#111827;--br:#1F2937;--gold:#D4AF37;--txt:#E8E6DF;--mut:#9CA3AF}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,Segoe UI,Roboto,sans-serif}
+header{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--br);position:sticky;top:0;background:var(--bg)}
+header a{color:var(--mut);text-decoration:none;border:1px solid var(--br);border-radius:999px;padding:6px 12px;font-size:13px}
+header a:hover{color:var(--gold);border-color:var(--gold)}
+h1{font-size:20px;margin:0;color:var(--gold);letter-spacing:.06em}
+main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
+h2{color:var(--gold);font-size:16px;letter-spacing:.08em;margin:34px 0 12px;text-transform:uppercase}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:15px}
+button{background:#0B101D;border:1px solid var(--br);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;margin:3px}
+button:hover{border-color:var(--gold);color:var(--gold)}
+button.gold{background:var(--gold);color:#0B101D;font-weight:700;border:none}
+input{background:#0B101D;border:1px solid var(--br);border-radius:9px;padding:7px 9px;color:var(--txt);font-size:13px;width:110px}
+textarea{width:100%;min-height:220px;background:#04060d;border:1px solid var(--br);border-radius:12px;color:#B8FFCF;font:13px/1.5 ui-monospace,Consolas,monospace;padding:12px}
+svg{background:#04060d;border:1px solid var(--br);border-radius:12px;width:100%}
+.rung{border:1px dashed var(--br);border-radius:12px;padding:10px;margin:10px 0}
+.rung .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.tag{color:var(--gold);font:12px ui-monospace,monospace}
+pre{background:#04060d;border:1px solid var(--br);border-radius:12px;padding:12px;color:#B8FFCF;font:13px/1.5 ui-monospace,Consolas,monospace;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--br);padding:7px 9px;text-align:left;color:var(--mut)}
+th{color:var(--gold)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.note{color:var(--mut);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <a href="/">← Studio</a>
+  <h1>🔌 PLC STUDIO</h1>
+  <a href="/industrial">Industrial Desk</a>
+  <a href="/creative">Creative</a>
+  <a href="/press">Press</a>
+</header>
+<main>
+<p class="note">IEC 61131-3 tooling: draw series-rung ladder logic, export real Structured Text and PLCopen TC6 XML, or write ST directly with snippet insert. “Send to chat” hands your code to the federated AI with PLC-reviewer context.</p>
+
+<h2>Ladder builder (series rungs)</h2>
+<div class="card">
+  <button class="gold" onclick="addRung()">+ Add rung</button>
+  <button onclick="exportST(true)">Copy Structured Text</button>
+  <button onclick="dlST()">Download .st</button>
+  <button onclick="dlXML()">Download PLCopen .xml</button>
+  <button onclick="explainLadder()">Review ladder in Studio chat</button>
+  <div id="rungs"></div>
+  <svg id="lad" height="80"></svg>
+  <h3>Generated Structured Text</h3>
+  <pre id="stOut">(* add a rung to begin *)</pre>
+  <p class="note">Contacts are series per rung (AND logic); NC negates. PLCopen XML targets CODESYS-class importers — verify in your suite (TIA Portal imports ST, not PLCopen LD).</p>
+</div>
+
+<h2>Structured Text editor</h2>
+<div class="card">
+  <select id="snip" onchange="insertSnippet()" style="background:#0B101D;color:var(--txt);border:1px solid var(--br);border-radius:9px;padding:8px">
+    <option value="">Insert snippet…</option>
+    <option value="ton">TON timer</option>
+    <option value="ctr">CTU counter</option>
+    <option value="trig">R_TRIG edge detect</option>
+    <option value="case">CASE state machine</option>
+    <option value="pid">PID skeleton</option>
+    <option value="modbus">Modbus register map note</option>
+  </select>
+  <button onclick="copyST()">Copy</button>
+  <button onclick="reviewST()">Review code in Studio chat</button>
+  <textarea id="stEd" spellcheck="false">PROGRAM PLC_PRG
+VAR
+    start_pb   : BOOL;
+    estop_ok   : BOOL;
+    motor_q    : BOOL;
+END_VAR
+
+motor_q := start_pb AND estop_ok;
+END_PROGRAM</textarea>
+</div>
+
+<h2>IEC 61131-3 &amp; vendor cheat sheet</h2>
+<div class="grid">
+  <div class="card"><h3>The five languages</h3>
+    <table><tr><th>Lang</th><th>Best for</th></tr>
+    <tr><td>LD (ladder)</td><td>Interlocks, electrician-readable logic</td></tr>
+    <tr><td>FBD</td><td>Process loops, signal flow</td></tr>
+    <tr><td>ST</td><td>Math, arrays, complex algorithms</td></tr>
+    <tr><td>SFC</td><td>Sequential machines, batches</td></tr>
+    <tr><td>IL</td><td>Deprecated — legacy only</td></tr></table>
+  </div>
+  <div class="card"><h3>Vendor addressing</h3>
+    <table><tr><th>Platform</th><th>Input / output / memory</th></tr>
+    <tr><td>Siemens TIA</td><td>I0.0 / Q0.0 / MW10, DB blocks</td></tr>
+    <tr><td>Allen-Bradley</td><td>Local:1:I.Data0 / tags (Studio 5000)</td></tr>
+    <tr><td>CODESYS</td><td>%IX0.0 / %QX0.0 / global vars</td></tr>
+    <tr><td>Mitsubishi GX</td><td>X0 / Y0 / D100</td></tr>
+    <tr><td>Schneider EcoStruxure</td><td>%I0.0 / %Q0.0 / %MW10</td></tr></table>
+    <p class="note">Export ST from this studio pastes into all of the above; PLCopen LD imports cleanly into CODESYS-family tools.</p>
+  </div>
+</div>
+</main>
+<script>
+var rungs = [];
+function addRung(){ rungs.push({contacts:[], coil:"Q0." + rungs.length}); render(); }
+function addC(i, t){ rungs[i].contacts.push({type:t, tag:"I0." + rungs[i].contacts.length}); render(); }
+function rmRung(i){ rungs.splice(i,1); render(); }
+function setTag(i, j, v){ if (j === -1) rungs[i].coil = v; else rungs[i].contacts[j].tag = v; render(true); }
+function render(keep){
+  var host = document.getElementById("rungs");
+  if (!keep) {
+    host.innerHTML = rungs.map(function (r, i) {
+      var cs = r.contacts.map(function (c, j) {
+        return '<span class="tag">' + (c.type === "NC" ? "NC " : "NO ") + '</span><input value="' + c.tag + '" onchange="setTag(' + i + ',' + j + ',this.value)">';
+      }).join(" ");
+      return '<div class="rung"><b>Rung ' + i + '</b> <button onclick="addC(' + i + ',\'NO\')">+ NO</button><button onclick="addC(' + i + ',\'NC\')">+ NC</button><button onclick="rmRung(' + i + ')">delete rung</button><div class="row">' + cs + ' → coil <input value="' + r.coil + '" onchange="setTag(' + i + ',-1,this.value)"></div></div>';
+    }).join("");
+  }
+  drawLadder(); genST();
+}
+function drawLadder(){
+  var svg = document.getElementById("lad"), H = Math.max(80, rungs.length * 90 + 20);
+  svg.setAttribute("height", H);
+  var W = svg.clientWidth || 900, s = "";
+  s += '<line x1="40" y1="10" x2="40" y2="' + (H-10) + '" stroke="#D4AF37" stroke-width="2"/>';
+  s += '<line x1="' + (W-40) + '" y1="10" x2="' + (W-40) + '" y2="' + (H-10) + '" stroke="#D4AF37" stroke-width="2"/>';
+  rungs.forEach(function (r, i) {
+    var y = 55 + i * 90, x = 90;
+    s += '<line x1="40" y1="' + y + '" x2="' + x + '" y2="' + y + '" stroke="#9CA3AF"/>';
+    r.contacts.forEach(function (c) {
+      s += '<line x1="' + x + '" y1="' + (y-18) + '" x2="' + x + '" y2="' + (y+18) + '" stroke="#E8E6DF" stroke-width="2"/>';
+      s += '<line x1="' + (x+16) + '" y1="' + (y-18) + '" x2="' + (x+16) + '" y2="' + (y+18) + '" stroke="#E8E6DF" stroke-width="2"/>';
+      if (c.type === "NC") s += '<line x1="' + (x-4) + '" y1="' + (y+20) + '" x2="' + (x+20) + '" y2="' + (y-20) + '" stroke="#D4AF37" stroke-width="2"/>';
+      s += '<text x="' + (x-2) + '" y="' + (y-26) + '" fill="#D4AF37" font-size="12" font-family="monospace">' + c.tag + '</text>';
+      s += '<line x1="' + (x+16) + '" y1="' + y + '" x2="' + (x+66) + '" y2="' + y + '" stroke="#9CA3AF"/>';
+      x += 66;
+    });
+    s += '<path d="M ' + x + ' ' + (y-16) + ' a 12 16 0 0 0 0 32" fill="none" stroke="#E8E6DF" stroke-width="2"/>';
+    s += '<path d="M ' + (x+14) + ' ' + (y-16) + ' a 12 16 0 0 1 0 32" fill="none" stroke="#E8E6DF" stroke-width="2"/>';
+    s += '<text x="' + (x-2) + '" y="' + (y-26) + '" fill="#D4AF37" font-size="12" font-family="monospace">' + r.coil + '</text>';
+    s += '<line x1="' + (x+14) + '" y1="' + y + '" x2="' + (W-40) + '" y2="' + y + '" stroke="#9CA3AF"/>';
+  });
+  svg.innerHTML = s;
+}
+function stLines(){
+  return rungs.map(function (r, i) {
+    if (!r.contacts.length) return "(* rung " + i + ": no contacts *) " + r.coil + " := FALSE;";
+    var e = r.contacts.map(function (c) { return c.type === "NC" ? "NOT " + c.tag : c.tag; }).join(" AND ");
+    return r.coil + " := " + e + ";";
+  });
+}
+function genST(){
+  var vars = [];
+  rungs.forEach(function (r) { vars.push(r.coil); r.contacts.forEach(function (c) { vars.push(c.tag); }); });
+  vars = Array.from(new Set(vars));
+  var body = "PROGRAM PLC_PRG\nVAR\n" + vars.map(function (v) { return "    " + v.padEnd(10) + " : BOOL;"; }).join("\n") + "\nEND_VAR\n\n" + stLines().join("\n") + "\nEND_PROGRAM";
+  document.getElementById("stOut").textContent = rungs.length ? body : "(* add a rung to begin *)";
+  return body;
+}
+function exportST(copy){
+  var t = genST();
+  if (copy && navigator.clipboard) navigator.clipboard.writeText(t);
+}
+function dl(name, text, mime){
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type: mime}));
+  a.download = name; a.click();
+}
+function dlST(){ dl("smash_ladder.st", genST(), "text/plain"); }
+function dlXML(){
+  var now = new Date().toISOString(), id = 1, xml = [];
+  xml.push('<?xml version="1.0" encoding="utf-8"?>');
+  xml.push('<project xmlns="http://www.plcopen.org/xml/tc6_0201">');
+  xml.push('<fileHeader companyName="Smash AI Pro" productName="PLC Studio" productVersion="1.2" creationDateTime="' + now + '"/>');
+  xml.push('<contentHeader name="SmashLadder" version="1.0" modificationDateTime="' + now + '"/>');
+  xml.push('<types><dataTypes/><pous><pou name="PLC_PRG" pouType="program"><interface><localVars>');
+  var vars = [];
+  rungs.forEach(function (r) { vars.push(r.coil); r.contacts.forEach(function (c) { vars.push(c.tag); }); });
+  Array.from(new Set(vars)).forEach(function (v) { xml.push('<variable name="' + v + '"><type><BOOL/></type></variable>'); });
+  xml.push('</localVars></interface><body><LD>');
+  rungs.forEach(function (r, i) {
+    var y = 55 + i * 90, rail = id++;
+    xml.push('<leftPowerRail localId="' + rail + '"><position x="40" y="' + y + '"/><connectionPointOut/></leftPowerRail>');
+    var prev = rail, x = 90;
+    r.contacts.forEach(function (c) {
+      var cid = id++;
+      xml.push('<contact localId="' + cid + '" negated="' + (c.type === "NC" ? "true" : "false") + '"><position x="' + x + '" y="' + y + '"/><connectionPointIn><connection refLocalId="' + prev + '"/><position x="' + x + '" y="' + y + '"/></connectionPointIn><connectionPointOut><position x="' + (x+16) + '" y="' + y + '"/></connectionPointOut></contact>');
+      prev = cid; x += 66;
+    });
+    var coil = id++;
+    xml.push('<coil localId="' + coil + '"><position x="' + x + '" y="' + y + '"/><connectionPointIn><connection refLocalId="' + prev + '"/><position x="' + x + '" y="' + y + '"/></connectionPointIn><connectionPointOut><position x="' + (x+14) + '" y="' + y + '"/></connectionPointOut></coil>');
+    var rr = id++;
+    xml.push('<rightPowerRail localId="' + rr + '"><position x="860" y="' + y + '"/><connectionPointIn><connection refLocalId="' + coil + '"/><position x="860" y="' + y + '"/></connectionPointIn></rightPowerRail>');
+  });
+  xml.push('</LD></body></pou></pous></types><instances><configurations/></instances></project>');
+  dl("smash_ladder.xml", xml.join("\n"), "application/xml");
+}
+function explainLadder(){
+  var t = "Review this PLC ladder logic (series rungs) for correctness, race risks and IEC 61131-3 good practice, then suggest the ST equivalent:\n" + genST();
+  location.href = "/?ask=" + encodeURIComponent(t);
+}
+var SNIPS = {
+ ton: "VAR ton1 : TON; END_VAR\nton1(IN := run_cmd, PT := T#2s);\nIF ton1.Q THEN\n    (* 2 s elapsed *)\nEND_IF;",
+ ctr: "VAR ctu1 : CTU; END_VAR\nctu1(CU := part_pulse, R := reset_pb, PV := 100);\nIF ctu1.Q THEN (* batch complete *) END_IF;",
+ trig: "VAR rt1 : R_TRIG; END_VAR\nrt1(CLK := start_pb);\nIF rt1.Q THEN (* one-shot on rising edge *) END_IF;",
+ case: "CASE step OF\n  0: IF start THEN step := 10; END_IF\n  10: (* load *) step := 20;\n  20: (* press *) step := 30;\n  30: (* eject *) step := 0;\nELSE step := 0;\nEND_CASE;",
+ pid: "VAR pid1 : PID; END_VAR\npid1(AUTO := auto_mode, PV := temp_pv, SP := temp_sp, MAN_OUT := man_cv);\ncv := pid1.OUT;  (* map to valve / VFD *)",
+ modbus: "(* Modbus map: holder 40001=SP, 40002=PV, 40003=state word *)\n(* RTU: 19200 8E1, slave 7; TCP: port 502, unit 1 *)"
+};
+function insertSnippet(){
+  var k = document.getElementById("snip").value; if (!k) return;
+  var ed = document.getElementById("stEd");
+  ed.value += "\n\n" + SNIPS[k];
+  document.getElementById("snip").value = "";
+}
+function copyST(){ navigator.clipboard && navigator.clipboard.writeText(document.getElementById("stEd").value); }
+function reviewST(){
+  location.href = "/?ask=" + encodeURIComponent("Review this IEC 61131-3 Structured Text for bugs, style and scan-time pitfalls; propose fixes inline:\n" + document.getElementById("stEd").value);
+}
+addRung();
+</script>
+</body>
+</html>

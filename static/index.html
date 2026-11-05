@@ -568,6 +568,12 @@ details.adv[open] summary{margin-bottom:14px}
       <button class="btn" id="creativeBtn" type="button" title="Creative Studio - graphic design, video editing and 3D">
         <span aria-hidden="true">✨</span> Creative
       </button>
+      <button class="btn" id="indBtn" type="button" title="Industrial Desk - engineering topics, calculators and references">
+        <span aria-hidden="true">🏭</span> Industrial
+      </button>
+      <button class="btn" id="plcBtn" type="button" title="PLC Studio - ladder builder, Structured Text and IEC 61131-3 tools">
+        <span aria-hidden="true">🔌</span> PLC Studio
+      </button>
       <button class="btn" id="dlBtn" type="button" title="Get the Smash AI Pro app - Android APK and Windows desktop">
         <span aria-hidden="true">📥</span> Get the app
       </button>
@@ -3180,6 +3186,12 @@ details.adv[open] summary{margin-bottom:14px}
   $('#brandBtn').addEventListener('click', function () { location.href = '/brandforge'; });
   if ($('#dlBtn')) $('#dlBtn').addEventListener('click', function () { location.href = '/downloads'; });
   if ($('#creativeBtn')) $('#creativeBtn').addEventListener('click', function () { location.href = '/creative'; });
+  if ($('#indBtn')) $('#indBtn').addEventListener('click', function () { location.href = '/industrial'; });
+  if ($('#plcBtn')) $('#plcBtn').addEventListener('click', function () { location.href = '/plc'; });
+  (function () {
+    var q = new URLSearchParams(location.search).get('ask');
+    if (q) { var i = $('#input'); if (i) { i.value = q; setTimeout(function () { var b = $('#sendBtn'); if (b) b.click(); }, 900); } }
+  })();
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sideBtn').addEventListener('click', function () {
     var on = document.querySelector('.app').classList.toggle('sideless');
