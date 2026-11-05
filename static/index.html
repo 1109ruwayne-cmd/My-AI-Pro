@@ -574,6 +574,9 @@ details.adv[open] summary{margin-bottom:14px}
       <button class="btn" id="plcBtn" type="button" title="PLC Studio - ladder builder, Structured Text and IEC 61131-3 tools">
         <span aria-hidden="true">🔌</span> PLC Studio
       </button>
+      <button class="btn" id="libBtn" type="button" title="The Library - every tool, reference and prompt under one roof">
+        <span aria-hidden="true">📚</span> Library
+      </button>
       <button class="btn" id="dlBtn" type="button" title="Get the Smash AI Pro app - Android APK and Windows desktop">
         <span aria-hidden="true">📥</span> Get the app
       </button>
@@ -3188,6 +3191,7 @@ details.adv[open] summary{margin-bottom:14px}
   if ($('#creativeBtn')) $('#creativeBtn').addEventListener('click', function () { location.href = '/creative'; });
   if ($('#indBtn')) $('#indBtn').addEventListener('click', function () { location.href = '/industrial'; });
   if ($('#plcBtn')) $('#plcBtn').addEventListener('click', function () { location.href = '/plc'; });
+  if ($('#libBtn')) $('#libBtn').addEventListener('click', function () { location.href = '/library'; });
   (function () {
     var q = new URLSearchParams(location.search).get('ask');
     if (q) { var i = $('#input'); if (i) { i.value = q; setTimeout(function () { var b = $('#sendBtn'); if (b) b.click(); }, 900); } }
