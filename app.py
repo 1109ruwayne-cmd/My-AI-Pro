@@ -2070,20 +2070,37 @@ async def codeforge_generate(request: Request):
     main_name = codeforge.main_filename(spec, slug)
     sysp = codeforge.system_prompt(spec, main_name)
 
-    def _call():
-        client = OpenAI(api_key=key, base_url=cfg["base_url"], timeout=240, max_retries=1)
-        if _is_gemini(cfg["base_url"]):
-            max_tok = int(cfg.get("max_output_tokens") or 16384)
-        elif "openrouter.ai" in cfg["base_url"]:
-            max_tok = min(int(cfg.get("max_output_tokens") or 8192), 8192)
-        else:
-            max_tok = min(int(cfg.get("max_output_tokens") or 16384), 16384)
-        resp = client.chat.completions.create(
-            model=cfg["model"],
+    def _call_once(base_url: str, model: str, api_key: str) -> str:
+        client = OpenAI(api_key=api_key, base_url=base_url, timeout=240, max_retries=1)
+        extra = {}
+        if _is_gemini(base_url):
+            # Gemini truncates at a small default; code needs the full budget.
+            extra["max_tokens"] = int(cfg.get("max_output_tokens") or 16384)
+        elif "openrouter.ai" in base_url:
+            extra["max_tokens"] = min(int(cfg.get("max_output_tokens") or 8192), 8192)
+        # Every other provider (xAI etc.) gets NO max_tokens - same shape the chat
+        # route uses successfully. Streamed so slow providers never stall the socket.
+        parts = []
+        stream = client.chat.completions.create(
+            model=model,
             messages=[{"role": "system", "content": sysp},
                       {"role": "user", "content": prompt}],
-            temperature=0.2, max_tokens=max_tok)
-        return resp.choices[0].message.content or ""
+            temperature=0.2, stream=True, **extra)
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                parts.append(chunk.choices[0].delta.content)
+        return "".join(parts)
+
+    def _call() -> str:
+        try:
+            return _call_once(cfg["base_url"], cfg["model"], key)
+        except Exception:                                      # noqa: BLE001 - try the federation
+            for fed in _federation_providers():
+                try:
+                    return _call_once(fed["base_url"], fed["model"], fed["key"])
+                except Exception:                              # noqa: BLE001 - next provider
+                    continue
+            raise
 
     try:
         raw = await run_in_threadpool(_call)
