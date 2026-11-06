@@ -24,9 +24,10 @@ import time
 from pathlib import Path
 
 import openai
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 
@@ -2013,6 +2014,116 @@ def plc_page():
 def library_page():
     return FileResponse(BASE_DIR / "static" / "library.html",
                         headers={"Cache-Control": "no-cache"})
+
+
+# ---------------------------------------------------------------- Code Forge
+import codeforge  # noqa: E402  any-language code writer + standalone app kits
+
+
+@app.get("/codeforge", response_class=HTMLResponse)
+def codeforge_page():
+    return FileResponse(BASE_DIR / "static" / "codeforge.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/codeforge/languages")
+def codeforge_languages():
+    return {"languages": codeforge.catalog()}
+
+
+@app.post("/api/codeforge/generate")
+async def codeforge_generate(request: Request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid request.")
+    prompt = str(body.get("prompt") or "").strip()
+    if not 3 <= len(prompt) <= 4000:
+        raise HTTPException(400, "Describe the program in 3 to 4000 characters.")
+    cfg = load_config()
+    visitor = billing.visitor_id(request)
+    admin_ok = _admin_given(request)
+    if admin_ok:
+        billing.mark_owner(visitor)
+    admin_ok = admin_ok or billing.is_owner(visitor)
+    if not admin_ok:
+        if ratelimit.ip_banned(ratelimit.client_ip(request)):
+            raise HTTPException(429, "This connection was temporarily blocked after repeated "
+                                     "abuse. Try again later.")
+        rate = 12 if billing.priority_chat(cfg, visitor) else 6
+        allowed, retry = ratelimit.hit(f"forge:{visitor}", rate, 60)
+        if not allowed:
+            billing.abuse_event(request, "forge_limit", f"visitor {visitor[:12]}")
+            raise HTTPException(429, f"Too many forge requests - try again in {retry} s.")
+    quota = billing.check_quota(cfg, visitor, admin_ok)
+    if not quota["allowed"]:
+        await run_in_threadpool(billing.record, cfg, visitor, "paywall", len(prompt), 0, True)
+        payload = billing.usage_payload(cfg, visitor, admin_ok)
+        payload["reason"] = quota["reason"]
+        return JSONResponse(status_code=402, content=payload)
+    key = get_api_key(request, cfg)
+    if not (key and cfg.get("model") and cfg.get("base_url")):
+        raise HTTPException(503, "The AI engine is not configured right now - try again shortly.")
+
+    spec = codeforge.resolve(str(body.get("language") or ""), str(body.get("custom") or ""))
+    slug = codeforge.slugify(prompt)
+    main_name = codeforge.main_filename(spec, slug)
+    sysp = codeforge.system_prompt(spec, main_name)
+
+    def _call():
+        client = OpenAI(api_key=key, base_url=cfg["base_url"], timeout=240, max_retries=1)
+        if _is_gemini(cfg["base_url"]):
+            max_tok = int(cfg.get("max_output_tokens") or 16384)
+        elif "openrouter.ai" in cfg["base_url"]:
+            max_tok = min(int(cfg.get("max_output_tokens") or 8192), 8192)
+        else:
+            max_tok = min(int(cfg.get("max_output_tokens") or 16384), 16384)
+        resp = client.chat.completions.create(
+            model=cfg["model"],
+            messages=[{"role": "system", "content": sysp},
+                      {"role": "user", "content": prompt}],
+            temperature=0.2, max_tokens=max_tok)
+        return resp.choices[0].message.content or ""
+
+    try:
+        raw = await run_in_threadpool(_call)
+    except Exception as exc:                                   # noqa: BLE001 - user-facing message
+        raise HTTPException(502, f"The AI engine refused or timed out ({exc.__class__.__name__}). "
+                                 "Try again, or pick another language.")
+    code, fenced = codeforge.extract_code(raw)
+    if len(code.strip()) < 20:
+        raise HTTPException(502, "The AI returned an empty program - add detail and try again.")
+    try:
+        await run_in_threadpool(billing.record, cfg, visitor, "codeforge", len(prompt), len(code))
+    except Exception:                                          # noqa: BLE001 - never break a forge
+        pass
+    return {"code": code, "filename": main_name, "language": spec["id"],
+            "label": spec["label"], "fenced": fenced}
+
+
+@app.post("/api/codeforge/package")
+async def codeforge_package(request: Request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid request.")
+    code = str(body.get("code") or "")
+    if not 20 <= len(code) <= 400_000:
+        raise HTTPException(400, "Forge some code first (or it is too large to pack).")
+    visitor = billing.visitor_id(request)
+    admin_ok = _admin_given(request) or billing.is_owner(visitor)
+    if not admin_ok:
+        allowed, retry = ratelimit.hit(f"forgepack:{visitor}", 10, 60)
+        if not allowed:
+            raise HTTPException(429, f"Too many kit downloads - try again in {retry} s.")
+    prompt = str(body.get("prompt") or "")
+    spec = codeforge.resolve(str(body.get("language") or ""), str(body.get("custom") or ""))
+    slug = codeforge.slugify(prompt)
+    when = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    zb = await run_in_threadpool(codeforge.build_kit, slug, spec, code, prompt, when)
+    zip_name = f"{slug}-standalone-kit.zip"
+    return Response(content=zb, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{zip_name}"'})
 
 
 LIB_DATA = BASE_DIR / "static" / "library-data.json"

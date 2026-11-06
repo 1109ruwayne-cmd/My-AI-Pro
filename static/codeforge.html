@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Forge · Smash AI Pro</title>
+<meta name="description" content="Smash AI Pro Code Forge: AI writes complete programs in any language and packages them as standalone app kits with installers for Windows, Linux and macOS.">
+<meta name="theme-color" content="#0A0E1A">
+<style>
+  :root { --dark:#0A0E1A; --panel:#111827; --line:#1F2937; --gold:#D4AF37; --gold-soft:rgba(212,175,55,.14);
+          --text:#E8E6DF; --muted:#9A978C; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--dark); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px 18px 72px; }
+  a.back { color:var(--gold); text-decoration:none; font-size:14px; font-weight:600; }
+  header { display:flex; align-items:center; gap:14px; margin:14px 0 4px; }
+  .mark { width:50px; height:50px; border-radius:13px; border:2px solid var(--gold); color:var(--gold);
+          font-weight:800; font-size:22px; display:flex; align-items:center; justify-content:center; }
+  h1 { font-size:24px; margin:0; } h1 .tm { font-size:12px; vertical-align:super; color:var(--gold); }
+  .sub { color:var(--muted); font-size:13.5px; margin:4px 0 20px; }
+  .cols { display:grid; grid-template-columns:400px 1fr; gap:18px; align-items:start; }
+  @media (max-width:900px){ .cols { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .card h2 { font-size:16px; margin:0 0 12px; color:var(--gold); }
+  label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:12px 0 5px; text-transform:uppercase; letter-spacing:.5px; }
+  input[type=text], select, textarea { width:100%; background:#0B101D; color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; }
+  textarea { min-height:110px; resize:vertical; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--gold); }
+  .btn { display:inline-block; background:var(--gold); color:#0A0E1A; border:0; font-weight:800; font-size:14.5px;
+         border-radius:999px; padding:12px 24px; cursor:pointer; margin-top:16px; width:100%; }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  .btn.ghost { background:transparent; color:var(--gold); border:1.5px solid var(--gold); }
+  .btnrow { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .btnrow .btn { width:auto; margin-top:0; padding:10px 16px; font-size:13px; }
+  .pills { display:flex; flex-wrap:wrap; gap:7px; max-height:190px; overflow:auto; padding:2px; }
+  .pill { background:#0B101D; border:1px solid var(--line); color:var(--muted); padding:6px 12px; border-radius:999px;
+          font-size:12.5px; font-weight:700; cursor:pointer; }
+  .pill.sel { color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
+  .status { font-size:13px; color:var(--muted); margin-top:10px; min-height:18px; }
+  .status.err { color:#F87171; } .status.ok { color:#4ADE80; }
+  pre { background:#0B101D; border:1px solid var(--line); border-radius:12px; padding:14px; overflow:auto;
+        max-height:520px; font-size:12.8px; line-height:1.5; margin:8px 0 0; white-space:pre; tab-size:4; }
+  code { font-family:ui-monospace,'Cascadia Code',Consolas,monospace; color:#D8E3F0; }
+  .fname { font-size:13px; color:var(--gold); font-weight:700; }
+  .kit { margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
+  .kit h3 { font-size:13.5px; margin:0 0 8px; color:var(--text); }
+  .kit ul { margin:0; padding-left:18px; color:var(--muted); font-size:12.8px; line-height:1.65; }
+  .kit b { color:var(--text); }
+  .hint { color:var(--muted); font-size:12.5px; margin-top:8px; }
+  .owner { margin-top:18px; border-top:1px solid var(--line); padding-top:10px; }
+  .owner input { font-size:12px; padding:7px 10px; }
+  footer { margin-top:36px; text-align:center; font-size:11.5px; color:var(--muted); opacity:.75; }
+  .spin { display:inline-block; animation:sp 1s linear infinite; } @keyframes sp { to { transform:rotate(360deg);} }
+  a.gold { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&larr; Back to Smash AI Pro</a>
+  <header>
+    <div class="mark" aria-hidden="true">&lt;/&gt;</div>
+    <div>
+      <h1>Code Forge<span class="tm">™</span></h1>
+      <div class="sub">Describe it. Pick any language. Get a complete program — then download it as a
+        <b>standalone app kit</b> with launchers, installer and native build scripts for Windows, Linux &amp; macOS.</div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div class="card">
+      <h2>1 · What should it do?</h2>
+      <textarea id="prompt" placeholder="e.g. A stock-taking tool for my workshop: add items with name, qty and price, search, and print a totals report."></textarea>
+      <div class="pills" style="margin-top:10px" id="ideas">
+        <span class="pill" data-p="Invoice generator: customer details, line items, VAT at 15%, print-ready totals">Invoice generator</span>
+        <span class="pill" data-p="Password generator and strength checker in the terminal">Password tool</span>
+        <span class="pill" data-p="CSV cleaner: dedupe rows, trim spaces, fix dates, export">CSV cleaner</span>
+        <span class="pill" data-p="Maintenance log for plant equipment: machine, date, fault, fix, hours">Maintenance log</span>
+        <span class="pill" data-p="QR-code text encoder for the terminal (pure standard library)">QR text encoder</span>
+        <span class="pill" data-p="Simple budget tracker with categories and monthly summary">Budget tracker</span>
+      </div>
+      <h2 style="margin-top:18px">2 · Language</h2>
+      <div class="pills" id="langs"><span class="hint">Loading languages…</span></div>
+      <div id="customWrap" style="display:none">
+        <label>Name the language</label>
+        <input type="text" id="customLang" placeholder="COBOL, AutoHotkey, Solidity, anything…">
+      </div>
+      <button class="btn" id="go" type="button">⚒ Forge the code</button>
+      <div class="status" id="status"></div>
+      <div class="owner">
+        <label>Owner key (optional)</label>
+        <input type="password" id="ownerKey" placeholder="unlimited use — stored in this browser only">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Your program <span class="fname" id="fname"></span></h2>
+      <pre id="out" style="min-height:200px"><code>Generated code appears here.
+
+The kit you can download contains:
+  src/            your program
+  launch.bat / launch.sh / launch.command   double-click runners
+  install.bat / install.sh     Start Menu, Desktop & app-menu shortcuts
+  uninstall.bat / uninstall.sh
+  build-windows.bat / build-linux.sh / build-macos.sh
+                   turn it into a TRUE standalone .exe / binary / installer
+  BUILD.md + README.txt        exactly what each step produces</code></pre>
+      <div class="btnrow">
+        <button class="btn ghost" id="copyBtn" type="button" disabled>📋 Copy code</button>
+        <button class="btn ghost" id="fileBtn" type="button" disabled>⬇ Download file</button>
+        <button class="btn" id="kitBtn" type="button" disabled style="width:auto;margin-top:0;padding:10px 16px;font-size:13px">📦 Download standalone kit (.zip)</button>
+      </div>
+      <div class="kit">
+        <h3>What “standalone” means — honestly</h3>
+        <ul>
+          <li><b>Run now:</b> launchers need the language runtime (Python, Node, JDK…) on the machine.</li>
+          <li><b>Truly standalone:</b> run the build script once — PyInstaller / pkg / gcc / dotnet self-contained / Go static binary / jpackage produce a single executable or native installer that needs <b>no runtime</b>.</li>
+          <li><b>Some languages stay interpreted</b> (SQL, R, Bash…) — the install scripts integrate them into the OS menu/PATH instead. BUILD.md tells you which is which.</li>
+        </ul>
+      </div>
+      <div class="hint">Free allowance follows your Smash AI Pro tier. Out of credits? <a class="gold" href="https://1109ruwayne-cmd.github.io/smash-ai-pro/#store">Upgrade in the store</a>.</div>
+    </div>
+  </div>
+  <footer>Code Forge · part of Smash AI Pro™ · created by Ruwayne Campher · 074 430 0150</footer>
+</div>
+
+<script>
+var LANGS = [], LANG = "python", CUSTOM = "", CODE = "", FNAME = "", LASTPROMPT = "";
+function $(id){ return document.getElementById(id); }
+function adminHeaders(){ var p=""; try { p=sessionStorage.getItem("myai.admin")||""; } catch(e){} var h={}; if(p) h["X-Admin-Password"]=p; return h; }
+function status(t, cls){ var s=$("status"); s.textContent=t||""; s.className="status"+(cls?" "+cls:""); }
+
+fetch("/api/codeforge/languages").then(function(r){ return r.json(); }).then(function(d){
+  LANGS = d.languages || [];
+  var box=$("langs"); box.innerHTML="";
+  LANGS.forEach(function(l){
+    var el=document.createElement("span");
+    el.className="pill"+(l.id===LANG?" sel":""); el.textContent=l.label; el.title=l.note||"";
+    el.onclick=function(){ LANG=l.id; CUSTOM=(l.id==="other"?CUSTOM:"");
+      Array.prototype.forEach.call(box.children,function(c){c.className="pill";});
+      el.className="pill sel"; $("customWrap").style.display=(l.id==="other")?"block":"none"; };
+    box.appendChild(el);
+  });
+});
+Array.prototype.forEach.call($("ideas").children, function(p){
+  p.onclick=function(){ $("prompt").value=p.getAttribute("data-p"); };
+});
+$("ownerKey").addEventListener("change", function(){
+  try { sessionStorage.setItem("myai.admin", $("ownerKey").value.trim()); } catch(e){}
+  status("Owner key saved for this browser.", "ok");
+});
+
+$("go").addEventListener("click", function(){
+  var prompt = $("prompt").value.trim();
+  if (prompt.length < 3) { status("Describe what the program must do first.", "err"); return; }
+  if (LANG === "other" && !$("customLang").value.trim()) { status("Name the language, or pick one from the list.", "err"); return; }
+  LASTPROMPT = prompt;
+  $("go").disabled = true;
+  status("⚒ Forging your " + (LANG === "other" ? $("customLang").value.trim() : LANG) + " program… (big programs can take a minute)");
+  var h = adminHeaders(); h["Content-Type"] = "application/json";
+  fetch("/api/codeforge/generate", { method:"POST", headers:h,
+      body: JSON.stringify({ prompt: prompt, language: LANG, custom: $("customLang").value.trim() }) })
+    .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); })
+    .then(function(res){
+      $("go").disabled = false;
+      if (!res.ok) {
+        if (res.d && res.d.reason) { status("Free allowance used up: " + res.d.reason + " — upgrade in the store (link below the kit).", "err"); }
+        else { status((res.d && res.d.detail) || "Generation failed. Try again.", "err"); }
+        return;
+      }
+      CODE = res.d.code; FNAME = res.d.filename;
+      $("fname").textContent = "· " + FNAME;
+      $("out").firstChild.textContent = CODE;
+      $("out").scrollTop = 0;
+      ["copyBtn","fileBtn","kitBtn"].forEach(function(b){ $(b).disabled = false; });
+      status("Done — " + CODE.length + " characters of " + res.d.label + ". Download the kit to install it anywhere.", "ok");
+    })
+    .catch(function(e){ $("go").disabled = false; status("Network error: " + e, "err"); });
+});
+
+$("copyBtn").addEventListener("click", function(){
+  navigator.clipboard.writeText(CODE).then(function(){ status("Copied.", "ok"); },
+    function(){ status("Copy blocked by browser — select the code and Ctrl+C.", "err"); });
+});
+function download(blob, name){
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+$("fileBtn").addEventListener("click", function(){
+  download(new Blob([CODE], {type:"text/plain"}), FNAME);
+  status("Downloaded " + FNAME, "ok");
+});
+$("kitBtn").addEventListener("click", function(){
+  $("kitBtn").disabled = true; status("Packing your standalone kit…");
+  var h = adminHeaders(); h["Content-Type"] = "application/json";
+  fetch("/api/codeforge/package", { method:"POST", headers:h,
+      body: JSON.stringify({ prompt: LASTPROMPT, language: LANG, custom: $("customLang").value.trim(), code: CODE, filename: FNAME }) })
+    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.blob(); })
+    .then(function(b){
+      var name = (FNAME.replace(/\.[^.]+$/, "") || "smash-app") + "-standalone-kit.zip";
+      download(b, name); $("kitBtn").disabled = false;
+      status("Kit downloaded: " + name + " — unzip anywhere, double-click launch or install.", "ok");
+    })
+    .catch(function(e){ $("kitBtn").disabled = false; status("Kit failed: " + e, "err"); });
+});
+</script>
+</body>
+</html>
