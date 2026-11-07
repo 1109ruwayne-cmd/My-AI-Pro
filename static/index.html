@@ -520,6 +520,11 @@ details.adv[open] summary{margin-bottom:14px}
 @media (prefers-reduced-motion: reduce){
   :root[data-theme="aurora"] body::before{animation:none}
 }
+  .think5 { flex:0 0 auto; align-self:flex-end; margin:0 8px 8px 0; width:40px; height:40px; border-radius:12px;
+            background:transparent; color:var(--muted); border:1.5px solid var(--border); font-size:18px;
+            cursor:pointer; line-height:1; }
+  .think5.on { color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft); }
+  .think5:hover { border-color:var(--accent); }
 </style>
 <script>
 /* Theme boot (pre-paint): apply the saved preset before the first render to avoid a flash.
@@ -639,6 +644,7 @@ details.adv[open] summary{margin-bottom:14px}
         </button>
         <input type="file" id="attachInput" multiple hidden>
         <textarea id="input" rows="1" placeholder="Ask anything: code, engineering, your files…"></textarea>
+        <button class="think5" id="thinkBtn" type="button" title="Deep think: hold a visible 5-second deliberation before the answer streams" aria-label="Toggle 5-second thinking">🧠</button>
         <button class="send" id="sendBtn" type="submit" aria-label="Send"></button>
       </form>
       <div class="fineprint">AI can make mistakes. Test code before you rely on it, and have safety-critical designs checked by a qualified engineer.</div>
@@ -2296,6 +2302,10 @@ details.adv[open] summary{margin-bottom:14px}
         (m.engineModel ? '<span class="mdl">· ' + esc(m.engineModel) + '</span>' : '') +
         '<span class="mdl">answered this</span></div>';
     }
+    if (m.thoughtSec) {
+      html += '<div class="engine-badge"><span>🧠</span><b>thought for ' + esc(m.thoughtSec) + ' s</b>' +
+              '<span class="mdl">before answering</span></div>';
+    }
     if (m.voices && m.voices.length) html += voiceRow(m.voices.length === 1 ? m.voices[0].text : '');
     if (m.error) html += '<div class="error-box">⚠ ' + esc(m.error) + '</div>';
     if (m.cut && last) html += '<div class="notice"><span>✂ The answer was cut off because it got very long.</span><button class="btn small" type="button" data-act="continue">Continue</button></div>';
@@ -2454,7 +2464,32 @@ details.adv[open] summary{margin-bottom:14px}
     var schedule = function () { if (!frame) frame = requestAnimationFrame(paint); };
     var history = apiHistory(-1);
 
+    /* --- 5-second deliberation gate: the studio visibly thinks before answering --- */
+    var THINK_ON = store.get('myai.think5', '1') !== '0';
+    var THINK_MS = 5000, t0 = Date.now(), pend = [], gating = THINK_ON, tick = 0, streamEnded = false;
+    function flushPend() {
+      gating = false;
+      if (tick) { clearInterval(tick); tick = 0; }
+      reply.thoughtSec = ((Date.now() - t0) / 1000).toFixed(1);
+      reply.status = '';
+      for (var i = 0; i < pend.length; i++) realHandle(pend[i]);
+      pend = [];
+      schedule();
+      if (streamEnded) finish();
+    }
+    if (gating) {
+      tick = setInterval(function () {
+        if (THINK_MS - (Date.now() - t0) > 0) {
+          reply.status = '🧠 Thinking… ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s';
+          schedule();
+        } else { flushPend(); }
+      }, 100);
+    }
     function handle(ev) {
+      if (gating && (ev.type === 'delta' || ev.type === 'status' || ev.type === 'audio')) { pend.push(ev); return; }
+      realHandle(ev);
+    }
+    function realHandle(ev) {
       if (ev.type === 'delta') { reply.content += ev.text; reply.status = ''; schedule(); }
       else if (ev.type === 'status') { reply.status = ev.text; schedule(); }
       else if (ev.type === 'sources') {
@@ -2515,7 +2550,13 @@ details.adv[open] summary{margin-bottom:14px}
       if (err && err.name === 'AbortError') reply.content += (reply.content ? '\n\n' : '') + '_(stopped)_';
       else reply.error = (err && err.message) || String(err);
     }).then(function () {
+      streamEnded = true;
+      if (gating) return;  /* the ticker flushes the held answer, then finishes */
+      finish();
+    });
+    function finish() {
       if (frame) cancelAnimationFrame(frame);
+      if (tick) { clearInterval(tick); tick = 0; }
       delete reply.status;
       S.controller = null;
       setStreaming(false);
@@ -2523,7 +2564,7 @@ details.adv[open] summary{margin-bottom:14px}
       fillAssistant(el, reply, false);
       saveChat();
       scrollToBottom();
-    });
+    }
   }
 
   function newChat() {
@@ -3197,6 +3238,16 @@ details.adv[open] summary{margin-bottom:14px}
   if ($('#creativeBtn')) $('#creativeBtn').addEventListener('click', function () { location.href = '/creative'; });
   if ($('#codeforgeBtn')) $('#codeforgeBtn').addEventListener('click', function () { location.href = '/codeforge'; });
   if ($('#purifyBtn')) $('#purifyBtn').addEventListener('click', function () { location.href = '/purify'; });
+  (function () {
+    var b = $('#thinkBtn');
+    if (!b) return;
+    var paint = function () { b.classList.toggle('on', store.get('myai.think5', '1') !== '0'); };
+    b.addEventListener('click', function () {
+      store.set('myai.think5', store.get('myai.think5', '1') === '0' ? '1' : '0');
+      paint();
+    });
+    paint();
+  })();
   if ($('#indBtn')) $('#indBtn').addEventListener('click', function () { location.href = '/industrial'; });
   if ($('#plcBtn')) $('#plcBtn').addEventListener('click', function () { location.href = '/plc'; });
   if ($('#libBtn')) $('#libBtn').addEventListener('click', function () { location.href = '/library'; });
