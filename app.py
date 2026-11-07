@@ -2016,6 +2016,27 @@ def library_page():
                         headers={"Cache-Control": "no-cache"})
 
 
+# ---------------------------------------------------------------- Purify bridge
+import purifylic  # noqa: E402  on-prem editions catalogue + owner-license badge
+
+
+@app.get("/purify", response_class=HTMLResponse)
+def purify_page():
+    return FileResponse(BASE_DIR / "static" / "purify.html",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/purify/status")
+def purify_status():
+    # Derived status only - the PURIFY_OWNER_LICENSE token is never echoed.
+    return purifylic.license_status()
+
+
+@app.get("/api/purify/editions")
+def purify_editions():
+    return {"editions": purifylic.catalog()}
+
+
 # ---------------------------------------------------------------- Code Forge
 import codeforge  # noqa: E402  any-language code writer + standalone app kits
 

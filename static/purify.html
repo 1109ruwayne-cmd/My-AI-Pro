@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purify · Smash AI Pro</title>
+<meta name="description" content="Purify inside Smash AI Pro: on-prem AI governance for regulated plants - approvals, immutable audit trail, Active Directory roles, local LLM, Modbus TCP / OPC-UA / REST device links. Licence-signed editions, no cloud billing.">
+<meta name="theme-color" content="#0A0E1A">
+<style>
+  :root { --dark:#0A0E1A; --panel:#111827; --line:#1F2937; --gold:#D4AF37; --gold-soft:rgba(212,175,55,.14);
+          --text:#E8E6DF; --muted:#9A978C; --green:#3FB27F; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--dark); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px 18px 72px; }
+  a.back { color:var(--gold); text-decoration:none; font-size:14px; font-weight:600; }
+  header { display:flex; align-items:center; gap:14px; margin:14px 0 4px; }
+  .mark { width:50px; height:50px; border-radius:13px; border:2px solid var(--gold); color:var(--gold);
+          font-weight:800; font-size:22px; display:flex; align-items:center; justify-content:center; }
+  h1 { font-size:24px; margin:0; } h1 .tm { font-size:12px; vertical-align:super; color:var(--gold); }
+  .sub { color:var(--muted); font-size:13.5px; margin:4px 0 18px; max-width:820px; line-height:1.55; }
+  .badge { border:1.5px solid var(--line); background:var(--panel); border-radius:14px; padding:12px 16px;
+           font-size:13.5px; color:var(--muted); margin:0 0 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .badge.owner { border-color:var(--gold); background:var(--gold-soft); color:var(--gold); font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:900px){ .grid { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .card h2 { font-size:16px; margin:0 0 4px; color:var(--gold); }
+  .card .price { font-size:20px; font-weight:800; color:var(--text); margin:6px 0 2px; }
+  .card .per { font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .card .blurb { font-size:13px; color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  ul.f { list-style:none; margin:0; padding:0; }
+  ul.f li { font-size:13px; padding:5px 0 5px 22px; position:relative; color:var(--text); }
+  ul.f li::before { content:"✓"; position:absolute; left:2px; color:var(--green); font-weight:800; }
+  ul.f li.road::before { content:"➜"; color:var(--gold); }
+  .seats { display:inline-block; background:#0B101D; border:1px solid var(--line); border-radius:999px;
+           padding:4px 12px; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; }
+  .wide { grid-column:1 / -1; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+  .step { background:#0B101D; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:12.5px; }
+  .arrow { color:var(--gold); font-weight:800; }
+  .pills { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+  .pill { background:#0B101D; border:1px solid var(--line); color:var(--muted); padding:6px 12px; border-radius:999px;
+          font-size:12.5px; font-weight:700; }
+  .btnrow { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  .btn { display:inline-block; background:var(--gold); color:#0A0E1A; border:0; font-weight:800; font-size:14px;
+         border-radius:999px; padding:12px 22px; cursor:pointer; text-decoration:none; }
+  .btn.ghost { background:transparent; color:var(--gold); border:1.5px solid var(--gold); }
+  .note { font-size:12px; color:var(--muted); margin-top:14px; line-height:1.6; }
+  h3.sec { font-size:15px; color:var(--gold); margin:26px 0 10px; text-transform:uppercase; letter-spacing:.6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&#8592; Back to the studio</a>
+  <header>
+    <div class="mark">P</div>
+    <div>
+      <h1>Purify<span class="tm">™</span></h1>
+      <div class="sub">On-prem AI governance for regulated plants. Every AI-driven write to a device or
+        program passes a human approval; every approval lands in an immutable audit trail. Your servers,
+        your Active Directory, your keys — licence-signed editions, no cloud billing, no data leaves site.</div>
+    </div>
+  </header>
+
+  <div class="badge" id="ownerBadge">Checking node licence…</div>
+
+  <h3 class="sec">Editions</h3>
+  <div class="grid" id="editions"></div>
+
+  <h3 class="sec">The approval loop (live demo flow)</h3>
+  <div class="card wide">
+    <div class="flow">
+      <span class="step">Link an OPC-UA / Modbus server</span><span class="arrow">&#8594;</span>
+      <span class="step">Read Server state</span><span class="arrow">&#8594;</span>
+      <span class="step">AI proposes write Line1.Speed=999</span><span class="arrow">&#8594;</span>
+      <span class="step">Human approves (single-use)</span><span class="arrow">&#8594;</span>
+      <span class="step">Write executes</span><span class="arrow">&#8594;</span>
+      <span class="step">Replay attempt &#8594; 409</span><span class="arrow">&#8594;</span>
+      <span class="step">Immutable audit trail</span>
+    </div>
+    <div class="pills">
+      <span class="pill">Modbus TCP</span><span class="pill">OPC-UA</span><span class="pill">REST</span>
+      <span class="pill">AD nested-group roles</span><span class="pill">LDAPS / StartTLS only</span>
+      <span class="pill">Local LLM option</span><span class="pill">Signed licence files</span>
+    </div>
+  </div>
+
+  <h3 class="sec">Why on-prem</h3>
+  <div class="card wide">
+    <div class="sub" style="margin:0">Purify installs inside your fence: Docker or bare metal, your AD does the
+      identity (break-glass local account first, JIT upsert, hourly leaver sync), your egress allowlist decides what
+      the box may reach. Editions live in a signed licence file — an upgrade is a new file, never a reinstall.
+      Roadmap features (hybrid LLM, SSO OIDC/SAML, custom connectors) ship to Enterprise first.</div>
+    <div class="btnrow">
+      <a class="btn" href="https://1109ruwayne-cmd.github.io/purify-site/" target="_blank" rel="noopener">Product site &amp; docs</a>
+      <a class="btn ghost" href="mailto:1109ruwayne@gmail.com?subject=Purify%20demo%20request">Book a demo</a>
+      <a class="btn ghost" href="/codeforge">See Code Forge</a>
+    </div>
+    <div class="note">Rate card: per site per year. Founding-five customers take −30% on year one with a 3-year
+      price lock. Prices exclude VAT. This studio page shows editions and owner licence status only — Purify itself
+      runs on the customer's own hardware.</div>
+  </div>
+</div>
+<script>
+(function () {
+  var badge = document.getElementById('ownerBadge');
+  fetch('/api/purify/status').then(function (r) { return r.json(); }).then(function (s) {
+    if (s && s.valid) {
+      badge.className = 'badge owner';
+      badge.textContent = '\uD83D\uDDDD\uFE0F ' + s.customer + ' — ' + s.label + ' · ' +
+        Number(s.max_users).toLocaleString('en-US') + ' seats · expires ' + s.expires +
+        ' · ' + s.features.length + '/10 features unlocked on this node';
+    } else {
+      badge.textContent = 'Node licence: none loaded — customer installs load their signed licence at deploy time.';
+    }
+  }).catch(function () { badge.textContent = 'Node licence: status unavailable.'; });
+
+  fetch('/api/purify/editions').then(function (r) { return r.json(); }).then(function (d) {
+    var host = document.getElementById('editions');
+    (d.editions || []).forEach(function (e) {
+      var road = { hybrid_llm: 1, sso_oidc: 1, custom_connectors: 1 };
+      var lis = e.features.map(function (f) {
+        return '<li' + (road[f] ? ' class="road" title="roadmap — Enterprise first"' : '') + '>' +
+          f.replace(/_/g, ' ') + '</li>';
+      }).join('');
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<h2>' + e.label + '</h2>' +
+        '<span class="seats">up to ' + Number(e.max_users).toLocaleString('en-US') + ' users</span>' +
+        '<div class="price">R ' + Number(e.price_zar_yr).toLocaleString('en-US') + '</div>' +
+        '<div class="per">per site / year</div>' +
+        '<p class="blurb">' + e.blurb + '</p><ul class="f">' + lis + '</ul>';
+      host.appendChild(card);
+    });
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>
