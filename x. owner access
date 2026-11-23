@@ -1,0 +1,3 @@
+curl -X POST http://localhost:8000/api/admin-setup \
+  -H "Content-Type: application/json" \
+  -d '{"password":"YourNewPassword123"}'
