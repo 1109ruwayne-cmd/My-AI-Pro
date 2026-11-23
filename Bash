@@ -1,0 +1,13 @@
+# 1. Clone or copy the Smash AI Pro files
+cd /home/user/my-ai
+
+# 2. Install dependencies (if you haven't)
+pip install -r requirements.txt
+
+# 3. Make sure ADMIN_PASSWORD is set in .env
+# (it already is — check .env.example for the template)
+
+# 4. Start the server
+python app.py --host 0.0.0.0 --port 8000
+
+# 5. Open http://localhost:8000 in your browser
